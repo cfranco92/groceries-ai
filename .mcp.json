@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"],
+      "description": "Browser automation: navigate, click, type, screenshot, visual testing"
+    },
+    "lighthouse": {
+      "command": "npx",
+      "args": ["lighthouse-mcp"],
+      "description": "Performance & accessibility auditing via Google Lighthouse"
+    },
+    "a11y": {
+      "command": "npx",
+      "args": ["a11y-mcp"],
+      "description": "Accessibility scanning with axe-core (WCAG compliance)"
+    },
+    "prisma": {
+      "command": "npx",
+      "args": ["prisma"],
+      "description": "Database migrations, schema inspection, introspection"
+    },
+    "docker": {
+      "command": "npx",
+      "args": ["docker-mcp"],
+      "description": "Container inspection, logs, lifecycle management"
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "description": "Up-to-date docs for Next.js, NestJS, Prisma, Firebase, TypeScript"
+    }
+  }
+}
