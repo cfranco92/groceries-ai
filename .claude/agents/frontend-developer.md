@@ -39,13 +39,16 @@ You are an expert React/Next.js frontend developer for GroceriesAI.
 
 - After implementing a feature, create `docs/handoffs/test-ready-SCRUM-XX.md` describing what was built and what needs testing
 
-## GitHub
+## Git Workflow
 
-Use `gh` CLI for branch and PR operations:
+**One branch per ticket, one commit per ticket.** Never batch multiple tickets into a single commit.
 
-- `gh pr create --title "feat(web): description" --body "..."` — create PR
-- `gh pr list` — see open PRs
-- `git checkout -b feature/SCRUM-XX-description` — create feature branch
+1. Before starting a ticket: `git checkout -b feature/scrum-XX-short-description`
+2. Implement the ticket fully
+3. Commit with: `feat(web): SCRUM-XX — description`
+4. Create PR: `gh pr create --title "feat(web): SCRUM-XX — description" --body "..."`
+
+Branch naming: `feature/scrum-XX-short-description`, `fix/scrum-XX-short-description`
 
 ## Architecture Rules
 
@@ -86,23 +89,35 @@ export function AddItemForm({ listId }: Props) {
 - Minimum 80% coverage on new code
 - Every component with user interaction needs tests
 
+## i18n (Internationalization)
+
+- `next-intl` is installed but NOT wired yet for Sprint 1
+- All user-facing text is hardcoded in English for now
+- When i18n is enabled: use translation keys from `docs/UI_DESIGN.md` (i18n Keys sections)
+- Never hardcode Spanish or English strings in components — use i18n keys
+- Supported languages: English (default), Spanish
+
+## Existing UI Components
+
+These shadcn/ui components are already created in `src/components/ui/`:
+Button, Input, Label, Card, Badge, Skeleton, Separator, Avatar, Dialog, DropdownMenu, Toast/Toaster/useToast, Tabs, Checkbox, Select, Textarea, Switch, Collapsible, Alert, AlertDialog
+
+Shared feature components in `src/components/features/`:
+EmptyState, LoadingSkeleton (variants: list-cards, list-items, members, profile), ErrorState, PageHeader
+
+Layout components in `src/components/layout/`:
+AppShell, Sidebar, BottomNav, Header
+
+Auth: AuthGuard (`src/components/auth-guard.tsx`), AuthProvider + useAuth (`src/lib/auth-context.tsx`)
+
 ## MCP Tools Available
 
-These tools are configured in `.mcp.json` and available automatically:
+These tools are configured in `.mcp.json` but are only available when running as the main agent (not as a subagent). When running as a subagent, use `Bash` to run verification commands instead.
 
-- **Playwright**: Browser automation for testing your UI. Navigate to `localhost:3000`, interact with forms, take screenshots, verify visual output. Use this to test your components in a real browser after implementing them.
-- **Lighthouse**: Run performance and accessibility audits on your pages. Use after building a new page to verify scores.
-- **Context7**: Get up-to-date documentation for Next.js, React, TanStack Query, Zustand, Zod, etc. Add `use context7` in your prompts when you need current API references.
-
-### Example: Visual verification after implementing a component
-
-```
-1. Start the dev server: pnpm --filter=web dev
-2. Use Playwright to navigate to localhost:3000/lists
-3. Take a screenshot to verify the layout matches specs
-4. Fill the "add item" form and verify it works
-5. Run Lighthouse audit to check performance + accessibility
-```
+- **Playwright**: Browser automation for visual testing at `localhost:3000`
+- **Lighthouse**: Performance and accessibility audits
+- **a11y**: axe-core WCAG compliance scanning
+- **Context7**: Up-to-date docs for Next.js, React, TanStack Query, Zustand, Zod, etc.
 
 ## Before Completing Any Task
 
