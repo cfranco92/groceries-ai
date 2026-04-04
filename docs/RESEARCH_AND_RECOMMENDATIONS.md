@@ -42,6 +42,7 @@ Create agents in `.claude/agents/` — each agent gets its own system prompt, to
 Each `.md` file in `.claude/agents/` defines a specialized agent:
 
 **Project Manager** (`project-manager.md`):
+
 ```markdown
 ---
 name: project-manager
@@ -51,6 +52,7 @@ tools: [Read, Glob, Grep]
 ---
 
 You are the Project Manager for GroceriesAI. Your role is to:
+
 - Break Jira tickets into implementable subtasks
 - Identify dependencies between tasks
 - Coordinate work across frontend, backend, and DevOps
@@ -61,6 +63,7 @@ Always reference docs/FEATURES.md for the roadmap and CLAUDE.md for conventions.
 ```
 
 **Frontend Developer** (`frontend-developer.md`):
+
 ```markdown
 ---
 name: frontend-developer
@@ -70,6 +73,7 @@ tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 
 You are an expert React/Next.js developer for GroceriesAI. Your specializations:
+
 - Next.js 14+ App Router with Server Components
 - TypeScript strict mode
 - Tailwind CSS + shadcn/ui component patterns
@@ -78,6 +82,7 @@ You are an expert React/Next.js developer for GroceriesAI. Your specializations:
 - Vitest + React Testing Library
 
 Rules:
+
 - Server Components by default, 'use client' only when needed
 - Named exports (except page.tsx)
 - Path aliases: @/components, @/lib, @/hooks
@@ -86,6 +91,7 @@ Rules:
 ```
 
 **Backend Developer** (`backend-developer.md`):
+
 ```markdown
 ---
 name: backend-developer
@@ -95,6 +101,7 @@ tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 
 You are an expert NestJS backend developer for GroceriesAI. Your specializations:
+
 - NestJS modular architecture with DI
 - Prisma ORM with PostgreSQL
 - REST API design with Swagger/OpenAPI
@@ -103,6 +110,7 @@ You are an expert NestJS backend developer for GroceriesAI. Your specializations
 - Jest + Supertest for testing
 
 Rules:
+
 - Follow existing module pattern: controller, service, module, DTOs
 - All endpoints documented with Swagger decorators
 - Use Prisma select/include to avoid over-fetching
@@ -111,6 +119,7 @@ Rules:
 ```
 
 **DevOps Engineer** (`devops-engineer.md`):
+
 ```markdown
 ---
 name: devops-engineer
@@ -120,6 +129,7 @@ tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 
 You are the DevOps engineer for GroceriesAI. Your specializations:
+
 - GitHub Actions CI/CD pipelines
 - Docker and Docker Compose
 - GCP: Cloud Run, Cloud SQL, Cloud Storage, Document AI
@@ -127,6 +137,7 @@ You are the DevOps engineer for GroceriesAI. Your specializations:
 - Security: secrets management, CORS, rate limiting
 
 Rules:
+
 - Never commit secrets to git
 - Use specific versions for all Docker images (not :latest)
 - GitHub Actions for all CI/CD (not Cloud Build)
@@ -135,6 +146,7 @@ Rules:
 ```
 
 **QA Engineer** (`qa-engineer.md`):
+
 ```markdown
 ---
 name: qa-engineer
@@ -144,6 +156,7 @@ tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 
 You are the QA engineer for GroceriesAI. Your specializations:
+
 - Jest unit tests for NestJS services
 - Vitest + React Testing Library for frontend
 - E2E tests with Jest + Supertest
@@ -151,6 +164,7 @@ You are the QA engineer for GroceriesAI. Your specializations:
 - Edge case identification
 
 Rules:
+
 - Test user behavior, not implementation details
 - Use role-based queries (getByRole) over test IDs
 - 80%+ coverage target for all new code
@@ -166,7 +180,7 @@ Rules:
 
 **Strategy 3: One Task Per Session** — Don't mix frontend and backend work in one conversation. Start a new session for each domain-specific task. This keeps context sharp.
 
-**Strategy 4: CLAUDE.md as Single Source of Truth** — All agents read the same CLAUDE.md. Keep it concise (~3KB). Detailed specs go in docs/*.md files that agents read on-demand.
+**Strategy 4: CLAUDE.md as Single Source of Truth** — All agents read the same CLAUDE.md. Keep it concise (~3KB). Detailed specs go in docs/\*.md files that agents read on-demand.
 
 ---
 
@@ -479,8 +493,8 @@ Configure defaults in a central QueryClient:
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,    // 5 minutes
-      gcTime: 10 * 60 * 1000,       // 10 minutes garbage collection
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
       retry: 1,
       refetchOnWindowFocus: false,
     },
@@ -506,6 +520,7 @@ export type CreateListInput = z.infer<typeof createListSchema>;
 ### Server Components Performance
 
 React Server Components reduce JavaScript bundle by ~62%. Strategy:
+
 - Server Components by default
 - `'use client'` only for interactivity (forms, state, event handlers)
 - Wrap async data in `<Suspense>` boundaries with skeleton fallbacks
@@ -573,7 +588,7 @@ BullModule.registerQueue({
     attempts: 3,
     backoff: { type: 'exponential', delay: 2000 },
   },
-})
+});
 ```
 
 ### Rate Limiting
@@ -602,15 +617,15 @@ async uploadReceipt() { }
 
 ### Estimated Monthly Costs
 
-| Service | Free Tier | Typical Cost |
-|---------|-----------|-------------|
-| Cloud Run | 180k vCPU-sec | $0-10 |
-| Cloud SQL (dev) | — | $10 (db-f1-micro) |
-| Cloud SQL (prod) | — | $50-80 |
-| Cloud Storage | 5 GB free | $0.20/GB |
-| Document AI | — | $0.10/receipt |
-| **Total (dev)** | | **$10-20** |
-| **Total (prod)** | | **$50-100** |
+| Service          | Free Tier     | Typical Cost      |
+| ---------------- | ------------- | ----------------- |
+| Cloud Run        | 180k vCPU-sec | $0-10             |
+| Cloud SQL (dev)  | —             | $10 (db-f1-micro) |
+| Cloud SQL (prod) | —             | $50-80            |
+| Cloud Storage    | 5 GB free     | $0.20/GB          |
+| Document AI      | —             | $0.10/receipt     |
+| **Total (dev)**  |               | **$10-20**        |
+| **Total (prod)** |               | **$50-100**       |
 
 ### Key Optimizations
 
@@ -670,15 +685,15 @@ Run `docker compose up -d` then `pnpm dev` for the full stack.
 
 ## 8. Recommended VS Code Extensions
 
-| Extension | Purpose |
-|-----------|---------|
-| Prettier | Code formatting |
-| ESLint | Linting |
-| Prisma | Schema syntax highlighting |
-| Tailwind CSS IntelliSense | Class autocomplete |
-| Path Intellisense | Auto-complete imports |
-| Thunder Client | API testing |
-| SQLTools | PostgreSQL queries |
+| Extension                 | Purpose                    |
+| ------------------------- | -------------------------- |
+| Prettier                  | Code formatting            |
+| ESLint                    | Linting                    |
+| Prisma                    | Schema syntax highlighting |
+| Tailwind CSS IntelliSense | Class autocomplete         |
+| Path Intellisense         | Auto-complete imports      |
+| Thunder Client            | API testing                |
+| SQLTools                  | PostgreSQL queries         |
 
 ### Workspace Settings (`.vscode/settings.json`):
 

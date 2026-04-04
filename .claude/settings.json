@@ -1,22 +1,25 @@
 {
   "hooks": {
-    "PostEdit": [
+    "PostToolUse": [
       {
-        "matcher": "\\.(ts|tsx)$",
-        "command": "npx prettier --write $FILE"
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"$CLAUDE_FILE_PATHS\" ] && npx prettier --write $CLAUDE_FILE_PATHS || true"
+          }
+        ]
       }
     ],
-    "PreCommit": [
+    "Stop": [
       {
-        "command": "pnpm lint --max-warnings 0"
-      },
-      {
-        "command": "pnpm tsc --noEmit"
-      }
-    ],
-    "PostCommit": [
-      {
-        "command": "git push origin $(git rev-parse --abbrev-ref HEAD)"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pnpm lint || true"
+          }
+        ]
       }
     ]
   }

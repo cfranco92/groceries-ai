@@ -115,6 +115,7 @@ The application is designed around the concept of a **Household** - a group of u
 ## Deployment Architecture (GCP)
 
 ### Phase 1 - Simple Deployment
+
 - **Frontend**: Vercel (natural fit for Next.js, free tier is generous)
 - **Backend**: Cloud Run (containerized NestJS, scales to zero)
 - **Database**: Cloud SQL for PostgreSQL (smallest instance)
@@ -122,6 +123,7 @@ The application is designed around the concept of a **Household** - a group of u
 - **Document AI**: Pay-per-use API
 
 ### Phase 2 - Scaled Deployment
+
 - **Redis**: Memorystore for Redis (for BullMQ job queue)
 - **Monitoring**: Cloud Monitoring + structured logging
 - **CDN**: Vercel Edge Network (automatic with Vercel)

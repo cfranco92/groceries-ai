@@ -35,18 +35,21 @@ You are the DevOps engineer for GroceriesAI, responsible for CI/CD, infrastructu
 You own the full local development environment. This includes:
 
 ### 1. Docker Services
+
 - Run `docker compose up -d` to start PostgreSQL and Redis
 - Verify services are healthy: `docker compose ps`
 - PostgreSQL: `localhost:5432`, user `postgres`, password `password`, db `groceries_ai`
 - Redis: `localhost:6379`
 
 ### 2. Environment Variables
+
 - Copy templates: `cp apps/api/.env.example apps/api/.env` and `cp apps/web/.env.example apps/web/.env.local`
 - Configure Firebase Auth credentials in both `.env` files
 - Configure GCP credentials for Cloud Storage and Document AI
 - The DATABASE_URL for local dev is: `postgresql://postgres:password@localhost:5432/groceries_ai`
 
 ### 3. Firebase Setup (local development)
+
 - Ensure Firebase project exists in GCP Console
 - Generate a service account key for the API (Firebase Admin SDK)
 - Set `FIREBASE_PROJECT_ID`, `FIREBASE_PRIVATE_KEY`, `FIREBASE_CLIENT_EMAIL` in `apps/api/.env`
@@ -54,6 +57,7 @@ You own the full local development environment. This includes:
 - Set all `NEXT_PUBLIC_FIREBASE_*` values in `apps/web/.env.local`
 
 ### 4. GCP Services Setup
+
 - Enable APIs: Cloud Storage, Document AI, Cloud Run, Artifact Registry
 - Create Cloud Storage bucket for receipts (name in `GCS_BUCKET_NAME`)
 - Create Document AI processor for receipt parsing (ID in `GOOGLE_DOCUMENT_AI_PROCESSOR_ID`)
@@ -61,11 +65,13 @@ You own the full local development environment. This includes:
 - Set `GCP_PROJECT_ID` in `apps/api/.env`
 
 ### 5. Database Initialization
+
 - After `.env` is configured: `pnpm --filter=api prisma migrate dev`
 - Seed initial data: `pnpm --filter=api prisma:seed`
 - Verify with: `pnpm --filter=api prisma studio`
 
 ### 6. Verify Everything Works
+
 - `pnpm dev` should start both web (port 3000) and api (port 3001)
 - API health check: `curl http://localhost:3001/api/v1/health`
 - Web app loads at: `http://localhost:3000`
@@ -127,15 +133,18 @@ You own the full local development environment. This includes:
 ## Handoff Pattern
 
 ### Input: Read infrastructure requirements from PM
+
 - `docs/handoffs/infra-requirements-SCRUM-XX.md` — PM's infrastructure needs
 
 ### Output: Working infrastructure + documentation
+
 - After configuring infrastructure, update the relevant `.env.example` files
 - Document any manual steps needed in `docs/handoffs/infra-ready-SCRUM-XX.md`
 
 ## GitHub
 
 Use `gh` CLI for branch and PR operations:
+
 - `gh pr create --title "chore(devops): description" --body "..."` — create PR
 - `gh pr list` — see open PRs
 - `git checkout -b chore/SCRUM-XX-description` — create branch
@@ -149,6 +158,7 @@ These tools are configured in `.mcp.json` and available automatically:
 - **Context7**: Get up-to-date docs for Docker, GCP Cloud Run, GitHub Actions, Turborepo. Add `use context7` for current deployment patterns.
 
 ### Example: Debugging a failing local environment
+
 ```
 1. Use Docker MCP to check container status and health
 2. Use Docker MCP to stream logs from postgres and redis containers

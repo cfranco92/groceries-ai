@@ -53,3 +53,4 @@ firebase-debug.log
 # GCP
 *.pem
 service-account-key.json
+firebase-sa-key.json

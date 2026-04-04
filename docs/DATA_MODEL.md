@@ -295,15 +295,19 @@ model ReceiptItem {
 ## Key Design Decisions
 
 ### Product Catalog is Per-Household
+
 Each household has its own product catalog. When a product is added to a list or parsed from a receipt, the system tries to match it against existing products in that household's catalog (fuzzy matching by name). If no match is found, a new product is created.
 
 ### Purchase Analytics on Product
+
 The `Product` model stores aggregated purchase data directly (`averagePrice`, `purchaseCount`, `avgDaysBetween`, `lastPurchasedAt`). These are updated each time a receipt containing that product is processed. This denormalization avoids expensive aggregate queries when generating recommendations.
 
 ### Soft Deletes for Lists
+
 Shopping lists use soft deletes (`deletedAt`) so that historical data and analytics are preserved even when users "delete" old lists. Products and receipts do not support soft deletes since they represent factual purchase history.
 
 ### ListItem Has Both `name` and `productId`
+
 A list item always has a `name` (what the user typed) and optionally a `productId` (if it was matched to a known product). This allows users to add free-text items without requiring a product match, while still enabling analytics when a match exists.
 
 ## Indexes

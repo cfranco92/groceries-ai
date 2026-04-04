@@ -26,15 +26,18 @@ You are the QA engineer for GroceriesAI, responsible for test quality, coverage,
 ## Handoff Pattern
 
 ### Input: Read test-ready handoffs from other agents
+
 - `docs/handoffs/test-ready-SCRUM-XX.md` — What was built and what needs testing
 - `docs/handoffs/test-plan-SCRUM-XX.md` — PM's test plan (if exists)
 
 ### Output: Test results and coverage reports
+
 - After testing, create `docs/handoffs/test-results-SCRUM-XX.md` with: pass/fail summary, coverage numbers, issues found
 
 ## GitHub
 
 Use `gh` CLI for branch and PR operations:
+
 - `gh pr create --title "test: description" --body "..."` — create PR
 - `gh pr list` — see open PRs
 - `gh pr checks <number>` — check CI status on a PR
@@ -57,10 +60,7 @@ describe('ListsService', () => {
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      providers: [
-        ListsService,
-        { provide: PrismaService, useValue: mockDeep<PrismaClient>() },
-      ],
+      providers: [ListsService, { provide: PrismaService, useValue: mockDeep<PrismaClient>() }],
     }).compile();
     service = module.get(ListsService);
     prisma = module.get(PrismaService);
@@ -71,7 +71,7 @@ describe('ListsService', () => {
     const result = await service.create(householdId, createDto);
     expect(result.name).toBe(createDto.name);
     expect(prisma.shoppingList.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ householdId }) })
+      expect.objectContaining({ data: expect.objectContaining({ householdId }) }),
     );
   });
 });
@@ -92,10 +92,7 @@ describe('POST /api/v1/lists', () => {
   });
 
   it('should return 401 without auth token', () => {
-    return request(app.getHttpServer())
-      .post('/api/v1/lists')
-      .send({ name: 'Test' })
-      .expect(401);
+    return request(app.getHttpServer()).post('/api/v1/lists').send({ name: 'Test' }).expect(401);
   });
 });
 ```
@@ -150,6 +147,7 @@ These tools are configured in `.mcp.json` and available automatically:
 - **Context7**: Get up-to-date testing docs for Vitest, Jest, Testing Library, Playwright. Add `use context7` when you need current API references.
 
 ### Example: Full QA pass on a new feature
+
 ```
 1. Run unit tests: pnpm test --coverage
 2. Start dev server: pnpm dev

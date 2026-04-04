@@ -6,18 +6,18 @@ GroceriesAI is a household grocery management application that allows families t
 
 ## Tech Stack
 
-| Layer            | Technology                        |
-| ---------------- | --------------------------------- |
-| Frontend (web)   | Next.js 14+ (App Router) + TypeScript |
-| Backend (API)    | NestJS + TypeScript               |
-| Database         | PostgreSQL + Prisma ORM           |
-| Authentication   | Firebase Auth                     |
-| File Storage     | Google Cloud Storage              |
-| OCR / Receipts   | Google Document AI                |
-| Monorepo         | Turborepo                         |
-| Package Manager  | pnpm                              |
-| Styling          | Tailwind CSS + shadcn/ui          |
-| Future Mobile    | React Native / Expo               |
+| Layer           | Technology                            |
+| --------------- | ------------------------------------- |
+| Frontend (web)  | Next.js 14+ (App Router) + TypeScript |
+| Backend (API)   | NestJS + TypeScript                   |
+| Database        | PostgreSQL + Prisma ORM               |
+| Authentication  | Firebase Auth                         |
+| File Storage    | Google Cloud Storage                  |
+| OCR / Receipts  | Google Document AI                    |
+| Monorepo        | Turborepo                             |
+| Package Manager | pnpm                                  |
+| Styling         | Tailwind CSS + shadcn/ui              |
+| Future Mobile   | React Native / Expo                   |
 
 ## Monorepo Structure
 
@@ -96,6 +96,7 @@ pnpm --filter=api prisma:seed       # Seed database
 ## Coding Conventions
 
 ### General
+
 - Language: TypeScript (strict mode) across all packages
 - All code, comments, variable names, documentation, and commit messages in **English**
 - User-facing text supports **Spanish** via i18n (app will be i18n-ready from the start)
@@ -104,6 +105,7 @@ pnpm --filter=api prisma:seed       # Seed database
 - Use absolute imports with path aliases (`@/components/...`, `@/lib/...`)
 
 ### Frontend (Next.js)
+
 - Use App Router (not Pages Router)
 - Server Components by default; add `'use client'` only when needed
 - State management with Zustand for client-side state
@@ -112,6 +114,7 @@ pnpm --filter=api prisma:seed       # Seed database
 - Components follow the pattern: `ComponentName/index.tsx` + `ComponentName.types.ts`
 
 ### Backend (NestJS)
+
 - Follow NestJS module structure strictly
 - Each module contains: controller, service, module, DTOs, and entities
 - Use class-validator for DTO validation
@@ -121,6 +124,7 @@ pnpm --filter=api prisma:seed       # Seed database
 - Error handling through NestJS exception filters
 
 ### Database (Prisma)
+
 - Schema file: `apps/api/src/prisma/schema.prisma`
 - Use snake_case for table and column names in PostgreSQL
 - Use camelCase in Prisma model fields (Prisma handles the mapping)
@@ -129,12 +133,14 @@ pnpm --filter=api prisma:seed       # Seed database
 - Write meaningful migration names: `pnpm --filter=api prisma migrate dev --name add_receipts_table`
 
 ### Testing
+
 - Unit tests: Jest (colocated with source files as `*.spec.ts`)
 - E2E tests: Jest + Supertest (in `apps/api/test/`)
 - Frontend tests: Vitest + React Testing Library
 - Minimum test coverage target: 80%
 
 ### Git Conventions
+
 - Branch naming: `feature/short-description`, `fix/short-description`, `chore/short-description`
 - Commit messages: Conventional Commits format (`feat:`, `fix:`, `chore:`, `docs:`, `test:`)
 - PR descriptions must include: summary of changes, testing done, and screenshots (if UI)
@@ -142,6 +148,7 @@ pnpm --filter=api prisma:seed       # Seed database
 ## Environment Variables
 
 ### API (`apps/api/.env`)
+
 ```
 DATABASE_URL=postgresql://user:password@localhost:5432/groceries_ai
 FIREBASE_PROJECT_ID=
@@ -155,6 +162,7 @@ NODE_ENV=development
 ```
 
 ### Web (`apps/web/.env.local`)
+
 ```
 NEXT_PUBLIC_API_URL=http://localhost:3001
 NEXT_PUBLIC_FIREBASE_API_KEY=

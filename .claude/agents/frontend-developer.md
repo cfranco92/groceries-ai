@@ -30,16 +30,19 @@ You are an expert React/Next.js frontend developer for GroceriesAI.
 ## Handoff Pattern
 
 ### Input: Read design specs and requirements
+
 - `docs/UI_DESIGN.md` — Comprehensive UI specifications from UX Designer
 - `docs/handoffs/ui-specs-SCRUM-XX.md` — Per-ticket UI specs
 - `docs/handoffs/api-requirements-SCRUM-XX.md` — PM's requirements breakdown
 
 ### Output: Working code + handoff to QA
+
 - After implementing a feature, create `docs/handoffs/test-ready-SCRUM-XX.md` describing what was built and what needs testing
 
 ## GitHub
 
 Use `gh` CLI for branch and PR operations:
+
 - `gh pr create --title "feat(web): description" --body "..."` — create PR
 - `gh pr list` — see open PRs
 - `git checkout -b feature/SCRUM-XX-description` — create feature branch
@@ -92,6 +95,7 @@ These tools are configured in `.mcp.json` and available automatically:
 - **Context7**: Get up-to-date documentation for Next.js, React, TanStack Query, Zustand, Zod, etc. Add `use context7` in your prompts when you need current API references.
 
 ### Example: Visual verification after implementing a component
+
 ```
 1. Start the dev server: pnpm --filter=web dev
 2. Use Playwright to navigate to localhost:3000/lists

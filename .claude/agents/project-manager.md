@@ -54,27 +54,34 @@ Since agents run in isolated sessions, coordination happens through **handoff do
 # Handoff: [Title] — SCRUM-XX
 
 ## Context
+
 Brief description of what this ticket requires.
 
 ## Target Agent
+
 Which agent should pick this up (frontend, backend, devops, qa, ux-designer).
 
 ## Requirements
+
 - Specific requirement 1
 - Specific requirement 2
 
 ## Dependencies
+
 - What must be done before this (other tickets, files, services)
 
 ## References
+
 - Relevant doc sections with file paths
 - Related tickets
 
 ## Acceptance Criteria
+
 - [ ] Criterion 1
 - [ ] Criterion 2
 
 ## Questions / Decisions Needed
+
 - Open questions that the target agent should address
 ```
 
@@ -101,6 +108,7 @@ These tools are configured in `.mcp.json` and available automatically:
 - **Context7**: Get up-to-date documentation for all project technologies (Next.js, NestJS, Prisma, Firebase, Tailwind). Use when creating handoff documents to reference current API patterns accurately. Add `use context7` to verify that requirements are compatible with current library versions.
 
 ### Example: Creating accurate handoffs
+
 ```
 1. Use context7 to verify current Next.js App Router patterns
 2. Reference accurate API when writing frontend requirements

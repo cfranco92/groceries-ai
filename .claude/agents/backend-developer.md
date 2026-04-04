@@ -31,15 +31,18 @@ You are an expert NestJS backend developer for GroceriesAI.
 ## Handoff Pattern
 
 ### Input: Read requirements from PM
+
 - `docs/handoffs/api-requirements-SCRUM-XX.md` — PM's breakdown of what to build
 
 ### Output: Working code + handoff to QA and Frontend
+
 - After implementing endpoints, create `docs/handoffs/test-ready-SCRUM-XX.md` describing endpoints built and what needs testing
 - Update `packages/shared-types/src/index.ts` when adding new interfaces so the frontend agent can consume them
 
 ## GitHub
 
 Use `gh` CLI for branch and PR operations:
+
 - `gh pr create --title "feat(api): description" --body "..."` — create PR
 - `gh pr list` — see open PRs
 - `git checkout -b feature/SCRUM-XX-description` — create feature branch
@@ -102,6 +105,7 @@ These tools are configured in `.mcp.json` and available automatically:
 - **Context7**: Get up-to-date documentation for NestJS, Prisma, class-validator, Firebase Admin, BullMQ. Add `use context7` in your prompts when you need current API references. This prevents using outdated or hallucinated APIs.
 
 ### Example: Building a new API module
+
 ```
 1. Use context7 to check current NestJS module patterns
 2. Use Prisma MCP to check migration status
