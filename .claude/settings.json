@@ -1,0 +1,23 @@
+{
+  "hooks": {
+    "PostEdit": [
+      {
+        "matcher": "\\.(ts|tsx)$",
+        "command": "npx prettier --write $FILE"
+      }
+    ],
+    "PreCommit": [
+      {
+        "command": "pnpm lint --max-warnings 0"
+      },
+      {
+        "command": "pnpm tsc --noEmit"
+      }
+    ],
+    "PostCommit": [
+      {
+        "command": "git push origin $(git rev-parse --abbrev-ref HEAD)"
+      }
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+name: Claude PR Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  claude-review:
+    name: Claude Code Review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-opus-4-6
+          prompt: |
+            Review this PR for GroceriesAI focusing on:
+
+            1. **TypeScript**: Strict mode compliance, no `any` types, proper type inference
+            2. **NestJS**: Module structure, dependency injection, Swagger decorators
+            3. **Next.js**: Server Components by default, proper `'use client'` usage
+            4. **Prisma**: Query optimization, avoid N+1, use `select`/`include`
+            5. **Security**: SQL injection, XSS, auth/authz issues, secrets exposure
+            6. **Testing**: Coverage for changed files, meaningful test names
+            7. **Conventions**: Consistent with CLAUDE.md (named exports, path aliases, i18n)
+
+            Provide specific line numbers and actionable suggestions.
+            Flag any breaking changes or missing migrations.
