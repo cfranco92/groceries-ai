@@ -73,6 +73,17 @@ These requirements apply to the GCS and receipt upload implementation:
 - **File key structure** — Use `receipts/{householdId}/{uuid}.{ext}` for logical separation
 - **Minimal IAM permissions** — Service account should only have: `storage.objects.create`, `storage.objects.get`, `storage.objects.delete` on the specific bucket
 
+## Known Issues
+
+### Node.js 20 Deprecation in GitHub Actions (SCRUM-37)
+
+GitHub Actions is deprecating Node.js 20 on runners:
+
+- **June 2, 2026** — Actions forced to Node.js 24 by default
+- **September 16, 2026** — Node.js 20 removed entirely
+
+The CI pipeline currently uses `node-version: '20'`. This needs to be upgraded to Node.js 24 before the deadline. Tracked in [SCRUM-37](https://fcode.atlassian.net/browse/SCRUM-37).
+
 ## Manual Steps Needed
 
 1. Each developer must create their own GCP service account key for local development
