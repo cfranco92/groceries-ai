@@ -197,6 +197,33 @@ export interface ApiError {
   error: string;
 }
 
+// ─── Parsed Receipt (OCR) ───────────────────────────────
+
+export interface ParsedLineItem {
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface ParsedReceiptData {
+  merchantName: string | null;
+  purchaseDate: string | null;
+  items: ParsedLineItem[];
+  subtotal: number | null;
+  tax: number | null;
+  total: number | null;
+  rawResponse: Record<string, unknown>;
+}
+
+export interface UpdateReceiptItemInput {
+  name?: string;
+  quantity?: number;
+  unitPrice?: number;
+  totalPrice?: number;
+  productId?: string;
+}
+
 // ─── Insights ────────────────────────────────────────────
 
 export interface SpendingByCategory {
