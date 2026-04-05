@@ -284,10 +284,7 @@ describe('GroceriesAI API (E2E)', () => {
       expect(checked).toHaveLength(1);
     });
 
-    // BUG: Route conflict — @Patch(':itemId') is declared before @Patch('reorder')
-    // in list-items.controller.ts, so Express matches :itemId='reorder' first.
-    // Fix: move reorder() method above updateItem() in the controller.
-    it.skip('PATCH /lists/:id/items/reorder reorders items (blocked by route ordering bug)', async () => {
+    it('PATCH /lists/:id/items/reorder reorders items', async () => {
       const res = await request(app.getHttpServer())
         .patch(`/api/v1/lists/${listId}/items/reorder`)
         .set('Authorization', adminAuth())
