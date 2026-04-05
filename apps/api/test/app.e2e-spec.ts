@@ -29,6 +29,27 @@ describe('GroceriesAI API (E2E)', () => {
   const memberAuth = () => `Bearer ${TEST_MEMBER_UID}`;
 
   async function cleanDatabase() {
+    // Clean receipt items and receipts (cascade handles receipt items, but explicit for safety)
+    await prisma.receiptItem.deleteMany({
+      where: {
+        receipt: {
+          household: {
+            members: {
+              some: { firebaseUid: { in: [TEST_ADMIN_UID, TEST_MEMBER_UID] } },
+            },
+          },
+        },
+      },
+    });
+    await prisma.receipt.deleteMany({
+      where: {
+        household: {
+          members: {
+            some: { firebaseUid: { in: [TEST_ADMIN_UID, TEST_MEMBER_UID] } },
+          },
+        },
+      },
+    });
     await prisma.listItem.deleteMany({
       where: {
         addedBy: { firebaseUid: { in: [TEST_ADMIN_UID, TEST_MEMBER_UID] } },
@@ -37,6 +58,16 @@ describe('GroceriesAI API (E2E)', () => {
     await prisma.shoppingList.deleteMany({
       where: {
         createdBy: { firebaseUid: { in: [TEST_ADMIN_UID, TEST_MEMBER_UID] } },
+      },
+    });
+    // Clean products (must come after receipt items due to FK)
+    await prisma.product.deleteMany({
+      where: {
+        household: {
+          members: {
+            some: { firebaseUid: { in: [TEST_ADMIN_UID, TEST_MEMBER_UID] } },
+          },
+        },
       },
     });
     await prisma.householdInvite.deleteMany({
@@ -404,6 +435,385 @@ describe('GroceriesAI API (E2E)', () => {
         .set('Authorization', adminAuth())
         .send({ quantity: -5 })
         .expect(400);
+    });
+  });
+
+  // ─── CATEGORIES & PRODUCTS ──────────────────────────────
+  describe('Categories & Products', () => {
+    let categoryId: string;
+
+    it('GET /categories returns seeded categories (200)', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/categories')
+        .set('Authorization', adminAuth())
+        .expect(200);
+
+      expect(res.body.data).toBeDefined();
+      expect(Array.isArray(res.body.data)).toBe(true);
+      // 13 categories seeded (see prisma/seed.ts)
+      expect(res.body.data.length).toBe(13);
+
+      const first = res.body.data[0];
+      expect(first.id).toBeDefined();
+      expect(first.name).toBeDefined();
+      expect(first.icon).toBeDefined();
+      expect(first.sortOrder).toBeDefined();
+
+      // Store a category ID for later filtering tests
+      categoryId = first.id;
+    });
+
+    it('GET /products returns empty list for new household (200)', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/products')
+        .set('Authorization', adminAuth())
+        .expect(200);
+
+      expect(res.body.data).toBeDefined();
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data).toHaveLength(0);
+      expect(res.body.meta).toBeDefined();
+      expect(res.body.meta.total).toBe(0);
+      expect(res.body.meta.hasNextPage).toBe(false);
+    });
+
+    // Products are created via receipt processing; after a receipt upload we can
+    // test the products endpoints. These tests run AFTER the Receipts section
+    // populates products in the database.
+    describe('after receipt creates products', () => {
+      let productId: string;
+
+      beforeAll(async () => {
+        // Upload a receipt to create products via mock OCR
+        const imageBuffer = Buffer.alloc(1024, 0xff);
+        await request(app.getHttpServer())
+          .post('/api/v1/receipts')
+          .set('Authorization', adminAuth())
+          .attach('file', imageBuffer, {
+            filename: 'receipt.jpg',
+            contentType: 'image/jpeg',
+          })
+          .expect(200);
+
+        // Wait a moment for any async product stats updates
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      });
+
+      it('GET /products returns products created by receipt (200)', async () => {
+        const res = await request(app.getHttpServer())
+          .get('/api/v1/products')
+          .set('Authorization', adminAuth())
+          .expect(200);
+
+        expect(res.body.data.length).toBeGreaterThan(0);
+        expect(res.body.meta.total).toBeGreaterThan(0);
+
+        // Verify product shape
+        const product = res.body.data[0];
+        expect(product.id).toBeDefined();
+        expect(product.name).toBeDefined();
+        expect(product.defaultUnit).toBeDefined();
+        expect(product.createdAt).toBeDefined();
+        expect(product.category).toBeDefined();
+
+        productId = product.id;
+      });
+
+      it('GET /products?search=Milk filters correctly (200)', async () => {
+        const res = await request(app.getHttpServer())
+          .get('/api/v1/products?search=Milk')
+          .set('Authorization', adminAuth())
+          .expect(200);
+
+        // The mock OCR produces "Whole Milk 1L"
+        expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+        for (const product of res.body.data) {
+          expect(product.name.toLowerCase()).toContain('milk');
+        }
+      });
+
+      it('GET /products?search=nonexistent returns empty (200)', async () => {
+        const res = await request(app.getHttpServer())
+          .get('/api/v1/products?search=zzzznonexistent')
+          .set('Authorization', adminAuth())
+          .expect(200);
+
+        expect(res.body.data).toHaveLength(0);
+        expect(res.body.meta.total).toBe(0);
+      });
+
+      it('GET /products?categoryId=xxx filters by category (200)', async () => {
+        // Use the "Other" category since mock OCR products get assigned to it
+        const catRes = await request(app.getHttpServer())
+          .get('/api/v1/categories')
+          .set('Authorization', adminAuth())
+          .expect(200);
+
+        const otherCategory = catRes.body.data.find(
+          (c: any) => c.name === 'Other',
+        );
+        expect(otherCategory).toBeDefined();
+
+        const res = await request(app.getHttpServer())
+          .get(`/api/v1/products?categoryId=${otherCategory.id}`)
+          .set('Authorization', adminAuth())
+          .expect(200);
+
+        // All mock products should be in the "Other" category
+        expect(res.body.data.length).toBeGreaterThan(0);
+      });
+
+      it('GET /products?categoryId=invalid returns empty (200)', async () => {
+        const res = await request(app.getHttpServer())
+          .get('/api/v1/products?categoryId=nonexistent-id')
+          .set('Authorization', adminAuth())
+          .expect(200);
+
+        expect(res.body.data).toHaveLength(0);
+      });
+
+      it('GET /products/:id returns product detail (200)', async () => {
+        const res = await request(app.getHttpServer())
+          .get(`/api/v1/products/${productId}`)
+          .set('Authorization', adminAuth())
+          .expect(200);
+
+        expect(res.body.data.id).toBe(productId);
+        expect(res.body.data.name).toBeDefined();
+        expect(res.body.data.defaultUnit).toBeDefined();
+        expect(res.body.data.category).toBeDefined();
+        // Product detail includes recent receipt items
+        expect(res.body.data.receiptItems).toBeDefined();
+        expect(Array.isArray(res.body.data.receiptItems)).toBe(true);
+      });
+
+      it('PATCH /products/:id as ADMIN updates product (200)', async () => {
+        const res = await request(app.getHttpServer())
+          .patch(`/api/v1/products/${productId}`)
+          .set('Authorization', adminAuth())
+          .send({ name: 'Updated Product Name' })
+          .expect(200);
+
+        expect(res.body.data.id).toBe(productId);
+        expect(res.body.data.name).toBe('Updated Product Name');
+      });
+
+      it('PATCH /products/:id as MEMBER returns 403', async () => {
+        await request(app.getHttpServer())
+          .patch(`/api/v1/products/${productId}`)
+          .set('Authorization', memberAuth())
+          .send({ name: 'Hacked Name' })
+          .expect(403);
+      });
+
+      it('PATCH /products/:id with invalid ID returns 404', async () => {
+        await request(app.getHttpServer())
+          .patch('/api/v1/products/nonexistent-product-id')
+          .set('Authorization', adminAuth())
+          .send({ name: 'Whatever' })
+          .expect(404);
+      });
+    });
+  });
+
+  // ─── RECEIPTS ───────────────────────────────────────────
+  describe('Receipts', () => {
+    let receiptId: string;
+    let receiptItemId: string;
+
+    it('POST /receipts with valid image creates receipt (200)', async () => {
+      // Create a minimal valid JPEG-like buffer
+      const imageBuffer = Buffer.alloc(1024, 0xff);
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/receipts')
+        .set('Authorization', adminAuth())
+        .attach('file', imageBuffer, {
+          filename: 'receipt.jpg',
+          contentType: 'image/jpeg',
+        })
+        .field('merchantName', 'E2E Test Store')
+        .field('purchaseDate', '2026-04-01')
+        .expect(200);
+
+      expect(res.body.data).toBeDefined();
+      expect(res.body.data.id).toBeDefined();
+      expect(res.body.data.status).toBe('COMPLETED');
+      expect(res.body.data.merchantName).toBe('E2E Test Store');
+      expect(res.body.data.imageUrl).toBeDefined();
+
+      receiptId = res.body.data.id;
+    });
+
+    it('POST /receipts with invalid file type returns 400', async () => {
+      const textBuffer = Buffer.from('this is not an image');
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/receipts')
+        .set('Authorization', adminAuth())
+        .attach('file', textBuffer, {
+          filename: 'receipt.txt',
+          contentType: 'text/plain',
+        })
+        .expect(400);
+
+      expect(res.body.message).toContain('Invalid file type');
+    });
+
+    it('POST /receipts without file returns 400', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/receipts')
+        .set('Authorization', adminAuth())
+        .expect(400);
+
+      expect(res.body.message).toContain('File is required');
+    });
+
+    it('GET /receipts returns receipts for household (200)', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/receipts')
+        .set('Authorization', adminAuth())
+        .expect(200);
+
+      expect(res.body.data).toBeDefined();
+      expect(Array.isArray(res.body.data)).toBe(true);
+      // At least the receipt we just created
+      expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+      expect(res.body.meta).toBeDefined();
+      expect(res.body.meta.total).toBeGreaterThanOrEqual(1);
+
+      // Verify receipt shape in list
+      const receipt = res.body.data.find((r: any) => r.id === receiptId);
+      expect(receipt).toBeDefined();
+      expect(receipt.merchantName).toBe('E2E Test Store');
+      expect(receipt.status).toBe('COMPLETED');
+      expect(receipt.imageUrl).toBeDefined();
+      expect(receipt.user).toBeDefined();
+      expect(receipt.user.displayName).toBeDefined();
+    });
+
+    it('GET /receipts?status=COMPLETED filters by status (200)', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/receipts?status=COMPLETED')
+        .set('Authorization', adminAuth())
+        .expect(200);
+
+      expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+      for (const receipt of res.body.data) {
+        expect(receipt.status).toBe('COMPLETED');
+      }
+    });
+
+    it('GET /receipts?status=FAILED returns empty when none failed (200)', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/receipts?status=FAILED')
+        .set('Authorization', adminAuth())
+        .expect(200);
+
+      expect(res.body.data).toHaveLength(0);
+    });
+
+    it('GET /receipts/:id returns receipt with items (200)', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/receipts/${receiptId}`)
+        .set('Authorization', adminAuth())
+        .expect(200);
+
+      expect(res.body.data.id).toBe(receiptId);
+      expect(res.body.data.merchantName).toBe('E2E Test Store');
+      expect(res.body.data.status).toBe('COMPLETED');
+      expect(res.body.data.imageUrl).toBeDefined();
+      expect(res.body.data.user).toBeDefined();
+      expect(res.body.data.items).toBeDefined();
+      expect(Array.isArray(res.body.data.items)).toBe(true);
+      // Mock OCR returns 5 items
+      expect(res.body.data.items.length).toBe(5);
+
+      // Verify item shape
+      const item = res.body.data.items[0];
+      expect(item.id).toBeDefined();
+      expect(item.name).toBeDefined();
+      expect(item.quantity).toBeDefined();
+      expect(item.unitPrice).toBeDefined();
+      expect(item.totalPrice).toBeDefined();
+      expect(item.product).toBeDefined();
+      expect(item.product.id).toBeDefined();
+      expect(item.product.name).toBeDefined();
+
+      receiptItemId = item.id;
+    });
+
+    it('GET /receipts/:id with invalid ID returns 404', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v1/receipts/nonexistent-receipt-id')
+        .set('Authorization', adminAuth())
+        .expect(404);
+    });
+
+    it('PATCH /receipts/:receiptId/items/:itemId corrects item (200)', async () => {
+      const res = await request(app.getHttpServer())
+        .patch(`/api/v1/receipts/${receiptId}/items/${receiptItemId}`)
+        .set('Authorization', adminAuth())
+        .send({ name: 'Corrected Item Name', quantity: 5 })
+        .expect(200);
+
+      expect(res.body.data.id).toBe(receiptItemId);
+      expect(res.body.data.name).toBe('Corrected Item Name');
+      expect(Number(res.body.data.quantity)).toBe(5);
+      expect(res.body.data.product).toBeDefined();
+    });
+
+    it('PATCH /receipts/:receiptId/items/:itemId with invalid receipt returns 404', async () => {
+      await request(app.getHttpServer())
+        .patch(`/api/v1/receipts/nonexistent-id/items/${receiptItemId}`)
+        .set('Authorization', adminAuth())
+        .send({ name: 'Does Not Matter' })
+        .expect(404);
+    });
+
+    it('PATCH /receipts/:receiptId/items/:itemId with invalid item returns 404', async () => {
+      await request(app.getHttpServer())
+        .patch(`/api/v1/receipts/${receiptId}/items/nonexistent-item-id`)
+        .set('Authorization', adminAuth())
+        .send({ name: 'Does Not Matter' })
+        .expect(404);
+    });
+
+    it('PATCH /receipts/:receiptId/items/:itemId — member can also correct (200)', async () => {
+      const res = await request(app.getHttpServer())
+        .patch(`/api/v1/receipts/${receiptId}/items/${receiptItemId}`)
+        .set('Authorization', memberAuth())
+        .send({ name: 'Member Corrected Name' })
+        .expect(200);
+
+      expect(res.body.data.name).toBe('Member Corrected Name');
+    });
+
+    it('DELETE /receipts/:id as MEMBER returns 403', async () => {
+      await request(app.getHttpServer())
+        .delete(`/api/v1/receipts/${receiptId}`)
+        .set('Authorization', memberAuth())
+        .expect(403);
+    });
+
+    it('DELETE /receipts/:id as ADMIN deletes (204)', async () => {
+      await request(app.getHttpServer())
+        .delete(`/api/v1/receipts/${receiptId}`)
+        .set('Authorization', adminAuth())
+        .expect(204);
+
+      // Verify it is gone
+      await request(app.getHttpServer())
+        .get(`/api/v1/receipts/${receiptId}`)
+        .set('Authorization', adminAuth())
+        .expect(404);
+    });
+
+    it('DELETE /receipts/:id with invalid ID returns 404', async () => {
+      await request(app.getHttpServer())
+        .delete('/api/v1/receipts/nonexistent-receipt-id')
+        .set('Authorization', adminAuth())
+        .expect(404);
     });
   });
 });
