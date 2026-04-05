@@ -17,6 +17,7 @@ import {
   Loader2,
   ShoppingCart,
 } from 'lucide-react';
+import { ProductAutocomplete } from '@/components/features/products/product-autocomplete';
 import {
   DndContext,
   closestCenter,
@@ -393,8 +394,6 @@ export default function ListDetailPage() {
   // Local items state for optimistic drag reorder and checkbox toggle
   const [localItems, setLocalItems] = useState<ListItem[] | null>(null);
 
-  const quickAddRef = useRef<HTMLInputElement>(null);
-
   const items = useMemo(() => {
     return localItems ?? list?.items ?? [];
   }, [localItems, list?.items]);
@@ -465,8 +464,8 @@ export default function ListDetailPage() {
     setEditDialogOpen(true);
   }, []);
 
-  const handleQuickAdd = async () => {
-    const trimmedName = quickAddValue.trim();
+  const handleQuickAdd = async (name?: string) => {
+    const trimmedName = (name ?? quickAddValue).trim();
     if (!trimmedName) return;
 
     try {
@@ -477,7 +476,26 @@ export default function ListDetailPage() {
         unit: 'UNIT',
       });
       setQuickAddValue('');
-      quickAddRef.current?.focus();
+      // Focus managed by ProductAutocomplete
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to add item.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleProductSelect = async (product: { name: string; defaultUnit: string }) => {
+    try {
+      await addItem.mutateAsync({
+        listId,
+        name: product.name,
+        quantity: 1,
+        unit: product.defaultUnit,
+      });
+      setQuickAddValue('');
+      // Focus managed by ProductAutocomplete
     } catch {
       toast({
         title: 'Error',
@@ -691,38 +709,16 @@ export default function ListDetailPage() {
         )}
       </div>
 
-      {/* Quick add input - sticky at the bottom */}
+      {/* Quick add input with product autocomplete - sticky at the bottom */}
       <div className="sticky bottom-0 border-t bg-background pt-3 pb-4 mt-4">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleQuickAdd();
-          }}
-          className="flex items-center gap-2"
-        >
-          <div className="relative flex-1">
-            <Plus className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              ref={quickAddRef}
-              value={quickAddValue}
-              onChange={(e) => setQuickAddValue(e.target.value)}
-              placeholder="Add an item..."
-              className="pl-9"
-              aria-label="Add a new item"
-            />
-          </div>
-          <Button
-            type="submit"
-            size="sm"
-            disabled={!quickAddValue.trim() || addItem.isPending}
-          >
-            {addItem.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              'Add'
-            )}
-          </Button>
-        </form>
+        <ProductAutocomplete
+          value={quickAddValue}
+          onChange={setQuickAddValue}
+          onProductSelect={handleProductSelect}
+          onFreeTextSubmit={(text) => handleQuickAdd(text)}
+          placeholder="Add an item..."
+          autoFocus={false}
+        />
       </div>
 
       {/* Edit Item Dialog */}
