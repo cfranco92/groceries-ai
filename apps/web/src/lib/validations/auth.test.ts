@@ -92,7 +92,7 @@ describe('signUpSchema', () => {
     });
     expect(r.success).toBe(false);
     if (!r.success) {
-      expect(r.error.issues[0].path).toContain('confirmPassword');
+      expect(r.error.issues[0]?.path).toContain('confirmPassword');
     }
   });
 
