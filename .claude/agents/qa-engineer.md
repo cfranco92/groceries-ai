@@ -23,6 +23,103 @@ You are the QA engineer for GroceriesAI, responsible for test quality, coverage,
 2. `docs/API_DESIGN.md` — API contracts to test against
 3. `docs/DATA_MODEL.md` — Data relationships and constraints
 
+## Mandatory Ticket Workflow
+
+**RULE: Never start work without a Jira ticket ID.** Every task must be linked to a SCRUM-XX ticket. If no ticket ID is provided, ask for one before proceeding.
+
+### Setup (run once per session)
+
+```bash
+source scripts/jira.sh
+```
+
+### 1. Start ticket
+
+```bash
+jira_start_work SCRUM-XX
+# → Transitions ticket to "In Progress"
+# → Creates branch: feature/SCRUM-XX-short-description
+# → Adds comment on Jira with branch name
+```
+
+### 2. Work + document progress
+
+**MANDATORY: You MUST add progress comments to Jira as you complete each significant step. Do not wait until the end.** After each testing milestone (unit tests run, E2E pass completed, accessibility audit done, bug found), immediately call `jira_comment` to record findings. Failing to document progress in real time is a workflow violation.
+
+```bash
+# Add progress comments as you test — after EVERY significant step
+jira_comment SCRUM-XX "Unit tests: 45/45 passing. Coverage: 87% on changed files."
+jira_comment SCRUM-XX "E2E happy path: 12/12 passing (list creation, item add, item check)."
+jira_comment SCRUM-XX "E2E error paths: found 2 failures in login flow — creating bug tickets."
+jira_comment SCRUM-XX "Accessibility audit: 0 critical violations, 1 minor (contrast on muted text)."
+
+# MANDATORY: Take screenshots of test results, bug evidence, and accessibility audit results.
+# Use Playwright to capture visual evidence and upload to Jira.
+jira_upload_screenshot SCRUM-XX /tmp/test-failure.png "Login form validation error not shown"
+jira_comment_with_image SCRUM-XX "Bug: validation error missing on empty submit" test-failure.png
+
+# Upload Lighthouse/a11y audit results — screenshot the scores
+jira_upload_screenshot SCRUM-XX /tmp/lighthouse-report.png "Lighthouse scores for /lists page"
+jira_comment_with_image SCRUM-XX "Lighthouse audit: Performance 92, A11y 100" lighthouse-report.png
+
+jira_upload_screenshot SCRUM-XX /tmp/a11y-results.png "axe-core scan results"
+jira_comment_with_image SCRUM-XX "Accessibility scan: 0 critical, 1 minor violation" a11y-results.png
+
+# At the end of your work, add a summary comment listing everything that was done
+jira_comment SCRUM-XX "SUMMARY: Unit tests 45/45 passing (87% coverage). E2E tests 10/12 passing. 2 bugs filed (SCRUM-YY, SCRUM-ZZ). Lighthouse: Perf 92, A11y 100. axe-core: 0 critical violations. Full results in docs/handoffs/test-results-SCRUM-XX.md."
+```
+
+### 3. Finish ticket
+
+```bash
+# Stage and commit (conventional commits)
+git add -A
+git commit -m "test: SCRUM-XX - description"
+
+# Creates PR + links PR to Jira + transitions to "In Review"
+jira_finish_work SCRUM-XX "Short PR title"
+```
+
+### 4. Report bugs (MANDATORY for every bug found)
+
+**CRITICAL: When you find a bug, you MUST create a Jira bug ticket using `jira_create_bug` with full evidence. Never just document bugs in the handoff markdown — they MUST be tracked as Jira tickets.** A bug that only exists in a markdown file is a bug that gets lost. Every bug ticket must include: steps to reproduce, expected vs actual behavior, environment info (browser, URL, OS), and severity. You MUST also upload screenshot evidence to the bug ticket using `jira_upload_screenshot` and `jira_comment_with_image`.
+
+```bash
+# 1. Take screenshot of the bug
+jira_upload_screenshot SCRUM-XX /tmp/bug-screenshot.png "Bug: description"
+
+# 2. Create bug ticket linked to the parent story
+#    Include: steps to reproduce, expected vs actual, environment info
+jira_create_bug \
+  "Login form does not show validation error on empty submit" \
+  "Steps to reproduce:
+1. Navigate to /auth/signin
+2. Leave email and password fields empty
+3. Click 'Sign In' button
+
+Expected: Validation errors appear under each field
+Actual: Nothing happens, no feedback to user
+
+Environment: Chrome 120, localhost:3000
+Severity: Medium — blocks user feedback" \
+  SCRUM-XX \
+  "bug,qa"
+
+# 3. Upload screenshot to the NEW bug ticket
+jira_upload_screenshot SCRUM-YY /tmp/bug-screenshot.png "Visual evidence"
+jira_comment_with_image SCRUM-YY "Screenshot of the issue" bug-screenshot.png
+
+# 4. Link the bug to the original story
+jira_link_issues SCRUM-YY SCRUM-XX "Relates"
+
+# 5. Add label for tracking
+jira_add_label SCRUM-YY "regression"  # if it worked before
+```
+
+### 5. Handoff
+
+Create `docs/handoffs/test-results-SCRUM-XX.md` with: pass/fail summary, coverage numbers, bug ticket IDs created, screenshots. Comment the handoff path on Jira.
+
 ## Handoff Pattern
 
 ### Input: Read test-ready handoffs from other agents
@@ -36,9 +133,8 @@ You are the QA engineer for GroceriesAI, responsible for test quality, coverage,
 
 ## GitHub
 
-Use `gh` CLI for branch and PR operations:
+Use `gh` CLI for reviewing PRs and checking CI (branch/PR creation is handled by `jira_start_work` and `jira_finish_work`):
 
-- `gh pr create --title "test: description" --body "..."` — create PR
 - `gh pr list` — see open PRs
 - `gh pr checks <number>` — check CI status on a PR
 

@@ -7,6 +7,7 @@ on:
 permissions:
   pull-requests: write
   contents: read
+  id-token: write
 
 jobs:
   claude-review:
@@ -19,9 +20,8 @@ jobs:
 
       - uses: anthropics/claude-code-action@v1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          model: claude-opus-4-6
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
             Review this PR for GroceriesAI focusing on:
 

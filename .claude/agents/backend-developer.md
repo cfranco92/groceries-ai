@@ -98,12 +98,63 @@ These are documented in `docs/API_DESIGN.md` but have no code yet:
 | Receipts | `POST /receipts`, `GET /receipts`, `GET /receipts/:id`, `PATCH /receipts/:id/items/:itemId`, `DELETE /receipts/:id` | Phase 2 |
 | Insights | `GET /insights/spending`, `GET /insights/frequent-items` | Phase 3 |
 
-## Git Workflow
+## Mandatory Ticket Workflow
 
-- **One branch per ticket.** Branch naming: `feature/scrum-XX-short-description`
-- **One commit per ticket.** Commit format: `feat(api): SCRUM-XX -- description`
-- Push and create PR with `gh pr create --title "feat(api): SCRUM-XX -- description" --body "..."`
-- Always branch from `main`
+**RULE: Never start work without a Jira ticket ID.** Every task must be linked to a SCRUM-XX ticket. If no ticket ID is provided, ask for one before proceeding.
+
+### Setup (run once per session)
+
+```bash
+source scripts/jira.sh
+```
+
+### 1. Start ticket
+
+```bash
+jira_start_work SCRUM-XX
+# → Transitions ticket to "In Progress"
+# → Creates branch: feature/SCRUM-XX-short-description
+# → Adds comment on Jira with branch name
+```
+
+### 2. Work + document progress
+
+**MANDATORY: You MUST add progress comments to Jira as you complete each significant step. Do not wait until the end.** After each major milestone (module created, migration run, tests passing, endpoints wired), immediately call `jira_comment` to record what was done. Failing to document progress in real time is a workflow violation.
+
+```bash
+# Add progress comments to Jira as you work — after EVERY significant step
+jira_comment SCRUM-XX "Prisma schema updated: added Product model with category relation. Migration applied."
+jira_comment SCRUM-XX "Created products module: controller, service, DTOs with class-validator decorators."
+jira_comment SCRUM-XX "Endpoints created: GET /products, POST /products, PATCH /products/:id — all with Swagger decorators."
+jira_comment SCRUM-XX "Unit tests written and passing: 12/12 for ProductsService."
+
+# Document API changes
+jira_comment SCRUM-XX "Endpoints created: GET /products, POST /products, PATCH /products/:id"
+
+# At the end of your work, add a summary comment listing everything that was done
+jira_comment SCRUM-XX "SUMMARY: Created products module (controller, service, DTOs, unit tests). Added Prisma migration for Product model. 12 unit tests passing. Swagger docs updated. shared-types updated with Product interface. Ready for QA."
+```
+
+### 3. Finish ticket
+
+```bash
+# Stage and commit (conventional commits)
+git add -A
+git commit -m "feat(api): SCRUM-XX - description"
+
+# Creates PR + links PR to Jira + transitions to "In Review"
+jira_finish_work SCRUM-XX "Short PR title"
+```
+
+### 4. Handoff to QA and Frontend
+
+- Create `docs/handoffs/test-ready-SCRUM-XX.md` describing endpoints built and what needs testing
+- Update `packages/shared-types/src/index.ts` when adding new interfaces so the frontend agent can consume them
+- Comment on Jira with the PR link and handoff document path
+
+### Branch naming
+
+`feature/SCRUM-XX-short-description`, `fix/SCRUM-XX-short-description`. Always branch from `main`.
 
 ## Handoff Pattern
 

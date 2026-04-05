@@ -34,6 +34,17 @@ export class ListItemsController {
     return { data };
   }
 
+  @Patch('reorder')
+  @ApiOperation({ summary: 'Bulk reorder items in a list' })
+  async reorderItems(
+    @CurrentUser() user: AuthUser,
+    @Param('listId') listId: string,
+    @Body() dto: ReorderItemsDto,
+  ) {
+    const data = await this.listItemsService.reorderItems(user, listId, dto);
+    return { data };
+  }
+
   @Patch(':itemId')
   @ApiOperation({ summary: 'Update a list item' })
   async updateItem(
@@ -48,17 +59,6 @@ export class ListItemsController {
       itemId,
       dto,
     );
-    return { data };
-  }
-
-  @Patch('reorder')
-  @ApiOperation({ summary: 'Bulk reorder items in a list' })
-  async reorderItems(
-    @CurrentUser() user: AuthUser,
-    @Param('listId') listId: string,
-    @Body() dto: ReorderItemsDto,
-  ) {
-    const data = await this.listItemsService.reorderItems(user, listId, dto);
     return { data };
   }
 

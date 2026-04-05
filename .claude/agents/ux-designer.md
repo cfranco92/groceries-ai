@@ -149,18 +149,65 @@ export function EmptyState() {
 - [ ] Color is not the only indicator (use icons + text)
 - [ ] Motion respects `prefers-reduced-motion`
 
-## Git Workflow
+## Mandatory Ticket Workflow
 
-One branch per ticket, one commit per ticket. Never batch multiple tickets into a single branch or commit.
+**RULE: Never start work without a Jira ticket ID.** Every task must be linked to a SCRUM-XX ticket. If no ticket ID is provided, ask for one before proceeding.
 
-- **Branch naming**: `chore/scrum-XX-short-description`, `feature/scrum-XX-short-description`, `fix/scrum-XX-short-description`
-- **Commit message**: conventional commit referencing the ticket (e.g., `chore: update UI design spec for SCRUM-XX`)
-- **Workflow**: create branch → do work → commit → switch to next branch for next ticket
+### Setup (run once per session)
 
-Use `gh` CLI for branch and PR operations:
+```bash
+source scripts/jira.sh
+```
 
-- `gh pr list` — see open PRs
-- `git log --oneline -20` — recent commits
+### 1. Start ticket
+
+```bash
+jira_start_work SCRUM-XX
+# → Transitions ticket to "In Progress"
+# → Creates branch: feature/SCRUM-XX-short-description
+# → Adds comment on Jira with branch name
+```
+
+### 2. Work + document progress
+
+**MANDATORY: You MUST add progress comments to Jira as you complete each significant step. Do not wait until the end.** After each major milestone (wireframe drafted, component spec written, a11y audit completed, i18n keys defined), immediately call `jira_comment` to record what was done. Failing to document progress in real time is a workflow violation.
+
+```bash
+# Add progress comments to Jira as you work — after EVERY significant step
+jira_comment SCRUM-XX "Completed wireframe and layout spec for Product Catalog screen."
+jira_comment SCRUM-XX "Defined component breakdown: ProductCard, CategoryFilter, SearchBar with shadcn/ui bases."
+jira_comment SCRUM-XX "Created UI spec for Product Catalog screen — all states defined (loading, empty, error, success)."
+jira_comment SCRUM-XX "i18n keys defined: 18 new keys for Product Catalog (EN/ES)."
+
+# Take screenshots of existing UI with Playwright for reference
+jira_upload_screenshot SCRUM-XX /tmp/current-state.png "Current state of the page"
+jira_comment_with_image SCRUM-XX "Current state before redesign" current-state.png
+
+# Run a11y audit and document findings
+jira_comment SCRUM-XX "a11y audit: 2 contrast violations found, fix recommendations included in spec"
+
+# At the end of your work, add a summary comment listing everything that was done
+jira_comment SCRUM-XX "SUMMARY: Created UI spec for Product Catalog (wireframe, components, states, responsive behavior, i18n keys). a11y audit completed with 2 findings addressed in spec. Spec written to docs/UI_DESIGN.md. Ready for frontend handoff."
+```
+
+### 3. Finish ticket
+
+```bash
+# Stage and commit (conventional commits)
+git add -A
+git commit -m "chore(design): SCRUM-XX - description"
+
+# Creates PR + links PR to Jira + transitions to "In Review"
+jira_finish_work SCRUM-XX "Short PR title"
+```
+
+### 4. Handoff to Frontend
+
+Produce design specifications in `docs/UI_DESIGN.md` (comprehensive) or `docs/handoffs/ui-specs-SCRUM-XX.md` (per-ticket). Comment the handoff path on Jira.
+
+### Branch naming
+
+`chore/SCRUM-XX-short-description`, `feature/SCRUM-XX-short-description`, `fix/SCRUM-XX-short-description`
 
 ---
 
