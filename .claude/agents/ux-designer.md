@@ -1,7 +1,7 @@
 ---
 name: ux-designer
 description: UX/UI design system, accessibility, and user experience specialist
-model: claude-opus-4-6
+model: claude-sonnet-4-6
 tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 

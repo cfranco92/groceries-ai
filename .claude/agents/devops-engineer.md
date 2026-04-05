@@ -1,7 +1,7 @@
 ---
 name: devops-engineer
 description: CI/CD, Docker, GCP deployment, and infrastructure specialist
-model: claude-opus-4-6
+model: claude-sonnet-4-6
 tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 
