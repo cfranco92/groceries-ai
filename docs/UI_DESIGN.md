@@ -6,6 +6,7 @@ This document defines the comprehensive UI/UX specifications for all Phase 1 scr
 
 ## Table of Contents
 
+**Phase 1**
 1. [Design System](#1-design-system)
 2. [Navigation Structure](#2-navigation-structure)
 3. [Authentication Screens](#3-authentication-screens)
@@ -17,6 +18,16 @@ This document defines the comprehensive UI/UX specifications for all Phase 1 scr
 9. [Common Components & States](#9-common-components--states)
 10. [Component Inventory](#10-component-inventory)
 11. [Design Decisions](#11-design-decisions)
+
+**Phase 2**
+12. [Phase 2 Navigation Update](#12-phase-2-navigation-update)
+13. [Phase 2 Design System Extensions](#13-phase-2-design-system-extensions)
+14. [Product Catalog Screens](#14-product-catalog-screens)
+15. [Receipt Screens](#15-receipt-screens)
+16. [Enhanced Add-Item Flow](#16-enhanced-add-item-flow)
+17. [Phase 2 Common Components](#17-phase-2-common-components)
+18. [Phase 2 Component Inventory](#18-phase-2-component-inventory)
+19. [Phase 2 Design Decisions](#19-phase-2-design-decisions)
 
 ---
 
@@ -1480,3 +1491,1623 @@ Rationale: In Phase 1, the product catalog is not yet mature — most items won'
 **Decision: Contextual, encouraging messages with relevant icons.**
 
 Rationale: Each empty state uses an icon related to its context (shopping cart for lists, open package for items) and a message that tells the user exactly what to do next. The tone is neutral and helpful — not cutesy. CTA buttons are included where the user can take immediate action.
+
+---
+
+---
+
+# Phase 2 — Receipts & Product Catalog
+
+---
+
+## 12. Phase 2 Navigation Update
+
+Phase 2 adds two new primary sections — **Products** and **Receipts** — requiring a navigation update on both mobile and desktop.
+
+### 12.1 Mobile — Updated Bottom Navigation Bar (4 tabs)
+
+```
+┌──────────────────────────────────────────────────┐
+│                                                  │
+│                  Main Content                    │
+│                                                  │
+├───────────┬───────────┬───────────┬──────────────┤
+│ 🛒 Lists  │ 📦 Products│ 🧾 Receipts│ 👤 Profile │
+│ (active)  │           │            │             │
+└───────────┴───────────┴────────────┴─────────────┘
+```
+
+**Changes from Phase 1:**
+- **Household** tab removed from bottom nav → moved to Profile submenu (accessible via Profile → Household Settings)
+- **Products** tab added (2nd position): `Package` Lucide icon
+- **Receipts** tab added (3rd position): `Receipt` Lucide icon
+- **Profile** tab remains 4th (last position)
+- Tab bar layout: 4 equal-width tabs, each `h-16`, icons `w-6 h-6`, label `text-xs`
+
+**Profile Submenu** (accessible via Profile page):
+- Household Settings → links to `/household`
+- Dark Mode toggle
+- Sign Out
+
+### 12.2 Desktop — Updated Sidebar Navigation
+
+```
+┌──────────────┬──────────────────────────────┐
+│  🥬          │                              │
+│  GroceriesAI │                              │
+│  ──────────  │                              │
+│  🛒 Lists    │       Main Content           │
+│              │                              │
+│  ── Products ─── (section header)           │
+│  📦 Catalog  │                              │
+│              │                              │
+│  ── Receipts ─── (section header)           │
+│  🧾 My Receipts│                            │
+│              │                              │
+│  ──────────  │                              │
+│  🏠 Household│                              │
+│  👤 Profile  │                              │
+│              │                              │
+│  ──────────  │                              │
+│  🚪 Sign Out │                              │
+└──────────────┴──────────────────────────────┘
+```
+
+**Changes from Phase 1:**
+- Two new section headers in sidebar: "Products" and "Receipts" (text-xs uppercase text-muted-foreground)
+- `Package` icon for Products Catalog nav item
+- `Receipt` icon for Receipts nav item
+- Household remains in sidebar (not moved to submenu on desktop, only on mobile)
+- Sidebar sections use `gap-1` between items, `gap-4` between section groups
+
+### 12.3 Updated Route Structure
+
+| Route                     | Screen                    | Phase | Auth Required |
+| ------------------------- | ------------------------- | ----- | ------------- |
+| `/sign-in`                | Sign In                   | 1     | No            |
+| `/sign-up`                | Sign Up                   | 1     | No            |
+| `/onboarding`             | Create/Join Household     | 1     | Yes           |
+| `/lists`                  | Lists Overview            | 1     | Yes           |
+| `/lists/[id]`             | List Detail               | 1     | Yes           |
+| `/household`              | Household Settings        | 1     | Yes           |
+| `/profile`                | Profile / Settings        | 1     | Yes           |
+| `/products`               | Product Catalog           | **2** | Yes           |
+| `/products/[id]`          | Product Detail            | **2** | Yes           |
+| `/receipts`               | Receipts List             | **2** | Yes           |
+| `/receipts/[id]`          | Receipt Detail            | **2** | Yes           |
+
+### 12.4 Updated i18n Keys
+
+```
+nav.lists                — "Lists" / "Listas"
+nav.products             — "Products" / "Productos"
+nav.productsCatalog      — "Catalog" / "Catálogo"
+nav.receipts             — "Receipts" / "Recibos"
+nav.household            — "Household" / "Hogar"
+nav.profile              — "Profile" / "Perfil"
+nav.signOut              — "Sign out" / "Cerrar sesión"
+nav.section.products     — "Products" / "Productos"
+nav.section.receipts     — "Receipts" / "Recibos"
+```
+
+---
+
+## 13. Phase 2 Design System Extensions
+
+### 13.1 New Color Tokens
+
+```
+Chart Colors (data visualization):
+  --chart-1:   221.2 83.2% 53.3%    (blue-500  — spending bars)
+  --chart-2:   142.1 70.6% 45.3%    (green-500 — category Fruits/Vegetables)
+  --chart-3:   38 92% 50%            (amber-500 — category Bakery/Snacks)
+  --chart-4:   0 84.2% 60.2%         (red-500   — price increase indicator)
+  --chart-5:   262.1 83.3% 57.8%     (violet-500 — category Personal Care)
+
+Status (for receipts):
+  --status-pending:    38 92% 50%            → amber-500 (same as --warning)
+  --status-processing: 217.2 91.2% 59.8%    → blue-400
+  --status-completed:  142.1 70.6% 45.3%    → green-500 (same as --success)
+  --status-failed:     0 84.2% 60.2%         → red-500   (same as --destructive)
+```
+
+### 13.2 New Icon Additions
+
+```
+Products:    Package, Tag, TrendingUp, TrendingDown, Minus (stable price)
+Categories:  (Lucide icons mapped per category)
+  - Fruits & Vegetables:  Apple
+  - Dairy:                Milk
+  - Meat & Fish:          Beef (or Drumstick)
+  - Bakery:               Croissant
+  - Beverages:            Coffee
+  - Snacks:               Candy
+  - Cleaning:             Sparkles
+  - Personal Care:        Heart
+  - Frozen:               Snowflake
+  - Canned Goods:         Archive
+  - Grains & Pasta:       Wheat
+  - Condiments:           Flask (or TestTube)
+  - Other:                MoreHorizontal
+Receipts:    Receipt, ScanLine, Upload, Camera, FileImage, RefreshCw
+Corrections: Edit2, AlertCircle, CheckCircle2, Link2
+```
+
+### 13.3 New Design Patterns
+
+**Filter Chip Bar** (horizontal scrollable):
+```
+┌─────────────────────────────────────────────────┐
+│ [All ×] [🥛 Dairy] [🥩 Meat] [🍎 Fruits] [→]  │  ← overflows with horizontal scroll
+└─────────────────────────────────────────────────┘
+```
+- Chips: `h-8 px-3 rounded-full text-xs font-medium`
+- Active chip: `bg-primary text-primary-foreground`
+- Inactive chip: `border bg-background hover:bg-muted`
+- Container: `flex gap-2 overflow-x-auto no-scrollbar pb-1`
+
+**Price Trend Indicator:**
+```
+↑ $3.80   (text-destructive + TrendingUp icon) — price increased
+↓ $3.20   (text-success + TrendingDown icon)   — price decreased
+→ $3.50   (text-muted-foreground + Minus icon) — price stable (±5%)
+```
+
+**Receipt Status Badge:**
+```
+[● Processing]  (amber bg, spinner)
+[✓ Completed]   (green bg, check icon)
+[✕ Failed]      (red bg, X icon)
+[○ Pending]     (muted bg, clock icon)
+```
+
+**Split Layout (Receipt Detail, desktop):**
+```
+┌──────────────────┬──────────────────┐
+│   Image Panel    │   Data Panel     │
+│   (50% width)    │   (50% width)    │
+│   sticky scroll  │   scrollable     │
+└──────────────────┴──────────────────┘
+```
+
+---
+
+## 14. Product Catalog Screens
+
+### 14.1 Screen: Product Catalog Page
+
+#### Purpose
+
+Browsable, searchable list of all products the household has ever purchased or added to lists. Grows automatically from receipt processing and list item linking. Provides a central reference for item history and pricing.
+
+#### Layout (ASCII wireframe)
+
+```
+┌─────────────────────────────┐
+│ Products            [🔍]    │  ← Page title + search toggle
+├─────────────────────────────┤
+│ ┌─────────────────────────┐ │
+│ │ 🔍 Search products...   │ │  ← Search bar (expands on tap)
+│ └─────────────────────────┘ │
+├─────────────────────────────┤
+│ [All] [🥛 Dairy] [🥩 Meat]  │  ← Category filter chips (scrollable)
+│ [🍎 Fruits] [🧴 Personal]   │
+├─────────────────────────────┤
+│ Sort: [Most Purchased ▾]     │  ← Sort dropdown
+├─────────────────────────────┤
+│                             │
+│ ┌─────────────────────────┐ │
+│ │ 🥛 Whole Milk           │ │  ← Product card
+│ │ Dairy · $3.50 avg       │ │
+│ │ Purchased 12×  Apr 1    │ │
+│ └─────────────────────────┘ │
+│                             │
+│ ┌─────────────────────────┐ │
+│ │ 🥩 Chicken Breast       │ │
+│ │ Meat & Fish · $8.20 avg │ │
+│ │ Purchased 8×   Mar 25   │ │
+│ └─────────────────────────┘ │
+│                             │
+│ ┌─────────────────────────┐ │
+│ │ 🍞 Whole Wheat Bread    │ │
+│ │ Bakery · $2.10 avg      │ │
+│ │ Purchased 6×   Mar 20   │ │
+│ └─────────────────────────┘ │
+│                             │
+│      [Load more...]         │  ← Pagination trigger
+│                             │
+└─────────────────────────────┘
+```
+
+#### Components
+
+| Component              | shadcn/ui Base     | Purpose                                               |
+| ---------------------- | ------------------ | ----------------------------------------------------- |
+| Page header            | —                  | "Products" title + search icon button                 |
+| Search input           | `Input`            | Full-width, collapsible (hidden behind icon on mobile)|
+| Category filter bar    | —                  | Custom `CategoryChip` components (see §17.3)          |
+| Sort dropdown          | `Select`           | Sort options: alphabetical, most purchased, recent    |
+| Product card           | `Card`             | Category icon + name + avg price + purchase metadata  |
+| Category icon          | Lucide icon        | Mapped per category (see §13.2)                       |
+| Price display          | —                  | Custom `PriceDisplay` component (see §17.5)           |
+| Load more button       | `Button`           | variant="outline", full width, triggers next page     |
+| Empty state            | `EmptyState`       | When no products or no search results                 |
+| Error state            | `ErrorState`       | On fetch failure                                      |
+| Loading state          | `Skeleton`         | 6 skeleton product cards                              |
+
+#### Product Card Detail
+
+```
+┌──────────────────────────────────────────────┐
+│  [🥛]  Whole Milk                     [→]   │
+│        Dairy                                 │
+│        $3.50 avg · Purchased 12× · Apr 1    │
+└──────────────────────────────────────────────┘
+```
+
+- Category icon: `w-8 h-8`, `text-muted-foreground`, left-aligned
+- Product name: `text-base font-medium`
+- Category name: `text-xs text-muted-foreground`
+- Price + stats: `text-sm text-muted-foreground`
+- Last purchased date: relative ("3 days ago", "2 weeks ago")
+- Arrow chevron: `ChevronRight`, links to product detail
+- Full card is tappable / clickable link
+
+#### States
+
+- **Loading**: 6 skeleton cards — icon placeholder + 2 text lines each; `aria-busy="true"`
+- **Empty (no products)**: `Package` icon + "No products yet" + "Products appear here as you upload receipts and add items to your lists" (no CTA — products are auto-created)
+- **Empty (search/filter no match)**: `Search` icon + "No products found for '{query}'" + "Clear filter" button
+- **Error**: "Could not load products" + retry button
+
+#### User Flow
+
+1. User taps Products tab → default view loads (sorted by most purchased)
+2. User can scroll category chips to filter by category → list updates
+3. User can tap search icon → search bar expands → type to filter → results update as they type (300ms debounce)
+4. User taps Sort dropdown → selects sort order → list re-sorts
+5. User scrolls to bottom → taps "Load more" → next page appends
+6. User taps a product card → navigates to `/products/[id]`
+
+#### Responsive Behavior
+
+- **Mobile**: Single column card list, `px-4`, search bar full width when expanded
+- **Desktop**: Two-column card grid (`grid-cols-2 lg:grid-cols-3`), search bar always visible in header, filter chips in a fixed top area
+
+#### i18n Keys
+
+```
+products.title                   — "Products" / "Productos"
+products.searchPlaceholder       — "Search products..." / "Buscar productos..."
+products.sort.label              — "Sort" / "Ordenar"
+products.sort.alphabetical       — "Alphabetical" / "Alfabético"
+products.sort.mostPurchased      — "Most Purchased" / "Más comprado"
+products.sort.recentlyPurchased  — "Recently Purchased" / "Comprado recientemente"
+products.filter.all              — "All" / "Todos"
+products.card.avgPrice           — "avg" / "prom."
+products.card.purchaseCount      — "Purchased {count}×" / "Comprado {count}×"
+products.card.lastPurchased      — "{date}" / "{date}"
+products.card.neverPurchased     — "Not yet purchased" / "Aún no comprado"
+products.loadMore                — "Load more" / "Cargar más"
+products.empty.title             — "No products yet" / "Aún no hay productos"
+products.empty.description       — "Products appear here as you upload receipts and add items to your lists" / "Los productos aparecen aquí cuando subes recibos y agregas artículos a tus listas"
+products.empty.searchTitle       — "No products found" / "No se encontraron productos"
+products.empty.searchDescription — "No results for \"{query}\"" / "Sin resultados para \"{query}\""
+products.empty.clearFilter       — "Clear filter" / "Limpiar filtro"
+products.error.load              — "Could not load products" / "No se pudieron cargar los productos"
+products.error.retry             — "Retry" / "Reintentar"
+```
+
+#### Accessibility Notes
+
+- Product cards are `<article>` elements with `aria-label="{product name}, {category}"` for screen readers
+- Category filter chips use `role="radio"` within a `role="radiogroup"` (only one active at a time)
+- Search input has `aria-label="Search products"` and `aria-controls` pointing to the list
+- Sort `Select` has `aria-label="Sort products by"`
+- When search filters the list, announce result count to screen reader via `aria-live="polite"` region: "Showing 3 results for 'milk'"
+- Keyboard: Tab navigates chips, Enter/Space activates
+
+---
+
+### 14.2 Screen: Product Detail Page
+
+#### Purpose
+
+Full detail view for a single product: purchase history timeline, price trend, category info, and quick-add to list. Admins can edit product metadata inline.
+
+#### Layout (ASCII wireframe)
+
+```
+┌─────────────────────────────┐
+│ ← Products                  │  ← Back button
+│                             │
+│  ┌───────────────────────┐  │
+│  │ [🥛]  Whole Milk      │  │  ← Product header card
+│  │  Dairy · UNIT         │  │
+│  │  $3.50 average price  │  │
+│  │  Purchased 12 times   │  │
+│  │  [✏️ Edit] (ADMIN)   │  │
+│  └───────────────────────┘  │
+│                             │
+│  Price Trend                │  ← Trend section
+│  ┌───────────────────────┐  │
+│  │ ↑ $3.80 last purchase │  │  ← Up/down/stable indicator
+│  │ (was $3.50 before)    │  │
+│  └───────────────────────┘  │
+│                             │
+│  Purchase History           │
+│  ┌───────────────────────┐  │
+│  │ Apr 3   $3.80  ← receipt│ │  ← Timeline entry
+│  │ Mar 25  $3.50  ← receipt│ │
+│  │ Mar 18  $3.50  ← receipt│ │
+│  │ Mar 10  $3.20  ← receipt│ │
+│  │ [Show all 12 purchases] │ │  ← Expand button
+│  └───────────────────────┘  │
+│                             │
+│  ┌───────────────────────┐  │
+│  │ [+ Add to list]       │  │  ← Quick-add CTA
+│  └───────────────────────┘  │
+│                             │
+└─────────────────────────────┘
+```
+
+#### Components
+
+| Component              | shadcn/ui Base     | Purpose                                               |
+| ---------------------- | ------------------ | ----------------------------------------------------- |
+| Back button            | `Button`           | variant="ghost", `ChevronLeft` icon                   |
+| Product header card    | `Card`             | Icon + name + category + default unit + avg price     |
+| Edit button            | `Button`           | variant="outline", `Pencil` icon, ADMIN only          |
+| Price trend indicator  | —                  | Custom (arrow icon + color + text, see §13.3)         |
+| Purchase history list  | —                  | Timeline with date + price + receipt link             |
+| Receipt link           | `Button`           | variant="ghost", `Receipt` icon, links to receipt     |
+| Show all button        | `Button`           | variant="ghost", text only, expands list              |
+| Add to list button     | `Button`           | variant="default", full width, `Plus` icon            |
+| Edit product modal     | `Dialog`           | ADMIN inline edit form (see below)                    |
+
+#### Edit Product Dialog (ADMIN only)
+
+```
+┌────────────────────────────┐
+│ Edit Product             ✕ │
+├────────────────────────────┤
+│ Name                       │
+│ ┌──────────────────────┐   │
+│ │ Whole Milk           │   │
+│ └──────────────────────┘   │
+│ Category                   │
+│ ┌──────────────────────┐   │
+│ │ Dairy             ▾  │   │
+│ └──────────────────────┘   │
+│ Default Unit               │
+│ ┌──────────────────────┐   │
+│ │ UNIT              ▾  │   │
+│ └──────────────────────┘   │
+│                            │
+│ [Cancel]      [Save]       │
+└────────────────────────────┘
+```
+
+- Category selector: `Select` populated from `GET /categories`
+- Unit selector: `Select` with all UnitType values (same options as item form)
+- Save calls `PATCH /products/:id`
+
+#### Purchase History Timeline Entry
+
+```
+┌──────────────────────────────────────┐
+│ Apr 3, 2026     $3.80    🧾 →        │
+│                 (×2 units)           │
+└──────────────────────────────────────┘
+```
+
+- Date: `text-sm font-medium`
+- Price: `text-sm` (colored by trend vs. previous: green if cheaper, red if more expensive)
+- Quantity: `text-xs text-muted-foreground`
+- Receipt icon: taps to `/receipts/[id]`
+- Default show last 5 purchases; "Show all" expands
+
+#### States
+
+- **Loading**: Skeleton header (icon circle + 3 text lines), skeleton trend section, 3 skeleton timeline rows
+- **Error**: "Could not load product details" + retry
+- **No history**: Show header card; purchase history section shows "No purchases recorded yet"
+- **Edit loading**: Save button disabled + spinner
+
+#### User Flow
+
+1. User arrives from Products list → sees product header, trend, recent history
+2. User scrolls to see purchase timeline → taps receipt link → navigates to receipt detail
+3. ADMIN: taps "Edit" → dialog opens pre-filled → edits → saves → toast "Product updated"
+4. User taps "Add to list" → sheet slides up with list picker (existing lists shown) → selects a list → item added → toast "Added to [list name]"
+
+#### Add to List Sheet (mobile) / Dialog (desktop)
+
+```
+┌─────────────────────────────┐
+│ Add to List                 │
+├─────────────────────────────┤
+│ Whole Milk                  │  ← Product name (read-only)
+│                             │
+│ Select list                 │
+│ ○ Weekly Groceries          │  ← Radio list of active lists
+│ ○ Party Supplies            │
+│                             │
+│ Quantity        Unit        │
+│ ┌──────────┐ ┌───────────┐  │
+│ │ 1        │ │ UNIT   ▾  │  │
+│ └──────────┘ └───────────┘  │
+│                             │
+│ [    Add to List    ]       │
+└─────────────────────────────┘
+```
+
+#### Responsive Behavior
+
+- **Mobile**: Single column, back button in header, purchase history as timeline cards
+- **Desktop**: Two columns — header + trend on left, full purchase history on right (`grid-cols-2`)
+
+#### i18n Keys
+
+```
+productDetail.backButton         — "Products" / "Productos"
+productDetail.category           — "Category" / "Categoría"
+productDetail.defaultUnit        — "Default unit" / "Unidad predeterminada"
+productDetail.avgPrice           — "Average price" / "Precio promedio"
+productDetail.purchaseCount      — "Purchased {count} times" / "Comprado {count} veces"
+productDetail.editButton         — "Edit" / "Editar"
+productDetail.priceTrend.title   — "Price Trend" / "Tendencia de precio"
+productDetail.priceTrend.up      — "Up from last purchase" / "Subió desde la última compra"
+productDetail.priceTrend.down    — "Down from last purchase" / "Bajó desde la última compra"
+productDetail.priceTrend.stable  — "Stable" / "Estable"
+productDetail.history.title      — "Purchase History" / "Historial de compras"
+productDetail.history.showAll    — "Show all {count} purchases" / "Ver las {count} compras"
+productDetail.history.noHistory  — "No purchases recorded yet" / "Aún no hay compras registradas"
+productDetail.history.receiptLink — "View receipt" / "Ver recibo"
+productDetail.addToList.button   — "Add to List" / "Agregar a lista"
+productDetail.addToList.title    — "Add to List" / "Agregar a lista"
+productDetail.addToList.selectList — "Select list" / "Seleccionar lista"
+productDetail.addToList.quantity — "Quantity" / "Cantidad"
+productDetail.addToList.unit     — "Unit" / "Unidad"
+productDetail.addToList.confirm  — "Add to List" / "Agregar a lista"
+productDetail.addToList.success  — "Added to {listName}" / "Agregado a {listName}"
+productDetail.edit.title         — "Edit Product" / "Editar Producto"
+productDetail.edit.nameLabel     — "Name" / "Nombre"
+productDetail.edit.categoryLabel — "Category" / "Categoría"
+productDetail.edit.unitLabel     — "Default Unit" / "Unidad Predeterminada"
+productDetail.edit.save          — "Save" / "Guardar"
+productDetail.edit.cancel        — "Cancel" / "Cancelar"
+productDetail.edit.success       — "Product updated" / "Producto actualizado"
+productDetail.error.load         — "Could not load product details" / "No se pudieron cargar los detalles del producto"
+```
+
+#### Accessibility Notes
+
+- Back button has `aria-label="Back to Products"`
+- Price trend indicator conveys information via text + icon (not color alone): "↑ Up from last purchase" in addition to color
+- Purchase history is a `<ul>` timeline; each entry is `<li>` with `aria-label="{date}: purchased at {price}"`
+- Edit dialog is an `AlertDialog` equivalent; traps focus; Cancel is default focus
+- "Add to list" sheet/dialog traps focus; Escape closes
+- ADMIN-only elements: `aria-hidden="true"` when current user is MEMBER (do not render, or visually hidden with no interaction)
+
+---
+
+## 15. Receipt Screens
+
+### 15.1 Screen: Receipt Upload Flow
+
+#### Purpose
+
+Allow users to submit a receipt image for OCR processing. On mobile, the camera is the primary option; on desktop, file upload with drag-and-drop. After upload, users wait for processing before being redirected to the receipt detail.
+
+#### Layout (ASCII wireframe — Mobile Upload)
+
+```
+┌─────────────────────────────┐
+│ Upload Receipt              │  ← Page/sheet title
+│                      [✕]   │
+├─────────────────────────────┤
+│                             │
+│  ┌───────────────────────┐  │
+│  │                       │  │
+│  │    [📷 Camera icon]   │  │  ← Primary action zone
+│  │                       │  │
+│  │  Photograph your      │  │
+│  │  receipt              │  │
+│  │                       │  │
+│  │ [📷 Take Photo]       │  │  ← Primary CTA (camera)
+│  └───────────────────────┘  │
+│                             │
+│  ─── or upload from files ──│
+│                             │
+│  [📂 Choose File]           │  ← Secondary (file picker)
+│                             │
+│  JPEG, PNG, PDF · max 10MB  │  ← File type hint
+│                             │
+└─────────────────────────────┘
+```
+
+#### Layout (ASCII wireframe — Desktop Upload)
+
+```
+┌─────────────────────────────────────────┐
+│ Upload Receipt                          │
+├─────────────────────────────────────────┤
+│                                         │
+│  ┌───────────────────────────────────┐  │
+│  │                                   │  │
+│  │    [↑ Upload icon]                │  │
+│  │                                   │  │
+│  │    Drag & drop your receipt here  │  │
+│  │    or click to browse             │  │
+│  │                                   │  │
+│  │    JPEG · PNG · PDF · max 10MB    │  │
+│  │                                   │  │
+│  └───────────────────────────────────┘  │
+│                                         │
+│  Optional details                       │
+│  Merchant name   Purchase date          │
+│  ┌─────────────┐ ┌────────────────┐    │
+│  │             │ │ Apr 3, 2026    │    │
+│  └─────────────┘ └────────────────┘    │
+│                                         │
+│  [    Upload Receipt    ]               │
+└─────────────────────────────────────────┘
+```
+
+#### Layout (ASCII wireframe — Upload Progress / Processing)
+
+```
+┌─────────────────────────────┐
+│ Processing Receipt...       │
+│                      [✕]   │
+├─────────────────────────────┤
+│                             │
+│  ┌───────────────────────┐  │
+│  │   [image thumbnail]   │  │  ← Small preview of uploaded image
+│  └───────────────────────┘  │
+│                             │
+│  ████████████░░░░  75%      │  ← Upload progress bar
+│  Uploading...               │  ← Changes to "Processing..."
+│                             │
+│  ┌───────────────────────┐  │
+│  │  ○  Uploading image   │✓ │  ← Step indicator
+│  │  ●  Reading receipt   │⟳ │  ← Spinner on current step
+│  │  ○  Matching products │  │
+│  └───────────────────────┘  │
+│                             │
+│  This usually takes         │
+│  10-15 seconds              │
+│                             │
+└─────────────────────────────┘
+```
+
+#### Camera Guidance (mobile, before capture)
+
+Guidance overlay displayed on mobile when camera is launched:
+- "Align your receipt within the frame"
+- "Ensure good lighting"
+- Receipt outline guide (dashed border overlay)
+
+#### Components
+
+| Component                | shadcn/ui Base  | Purpose                                               |
+| ------------------------ | --------------- | ----------------------------------------------------- |
+| Upload container         | `Dialog`/`Sheet`| Modal (desktop Dialog, mobile Sheet from bottom)      |
+| Camera zone (mobile)     | —               | Custom `FileUpload` component (see §17.1)             |
+| Drag-drop zone (desktop) | —               | Custom `FileUpload` component                         |
+| File input (hidden)      | `Input`         | type="file", accept=".jpg,.jpeg,.png,.pdf"            |
+| Merchant name input      | `Input`         | Optional pre-fill for merchant                        |
+| Purchase date picker     | `Input`         | type="date", optional                                 |
+| Upload button            | `Button`        | variant="default", disabled until file selected       |
+| Progress bar             | `Progress`      | shadcn/ui Progress component, 0–100                   |
+| Step indicator           | —               | 3-step list: Uploading → Reading → Matching           |
+| Wait message             | —               | "This usually takes 10–15 seconds"                    |
+
+#### States
+
+- **Idle**: Upload zone visible; no file selected; Upload button disabled
+- **File selected**: Zone shows file name + size + thumbnail (if image); Upload button enabled
+- **Uploading (0–100%)**: Progress bar animates; step 1 active; Cancel button available
+- **Processing**: Progress bar at 100%; step 2/3 active with spinner; no cancel (already uploaded)
+- **Error (file too large)**: Inline error "File is too large. Maximum size is 10MB."
+- **Error (wrong type)**: Inline error "Invalid file type. Please upload JPEG, PNG, or PDF."
+- **Error (upload failed)**: Error message + "Try again" button
+- **Error (processing failed)**: "Receipt processing failed. You can try uploading again or submit manually." + Retry
+- **Success**: Auto-redirect to `/receipts/[id]` with toast "Receipt uploaded! Processing..."
+
+#### User Flow (Mobile)
+
+1. User taps FAB / "Upload Receipt" on Receipts list
+2. Sheet slides up showing camera zone + file option
+3. User taps "Take Photo" → device camera opens
+4. User photographs receipt → camera returns image to app
+5. Sheet shows image preview + file details
+6. Optional: user fills in merchant name / date
+7. User taps "Upload Receipt"
+8. Progress bar shows upload → transitions to processing steps
+9. On success: redirect to receipt detail
+10. On failure: error message + retry option
+
+#### User Flow (Desktop)
+
+1. User clicks "Upload Receipt" button on Receipts page
+2. Dialog opens with drag-drop zone
+3. User drags file in (drop zone highlights) OR clicks to browse
+4. File selected → preview shown; optional fields visible
+5. User clicks "Upload Receipt"
+6. Progress + processing steps animate
+7. Redirect to receipt detail on completion
+
+#### Responsive Behavior
+
+- **Mobile**: Sheet (bottom slide-up), camera as primary, full-width buttons, compact step list
+- **Desktop**: Centered dialog (`max-w-lg`), drag-drop zone with dashed border, side-by-side optional fields
+
+#### i18n Keys
+
+```
+receiptUpload.title              — "Upload Receipt" / "Subir Recibo"
+receiptUpload.camera.title       — "Photograph your receipt" / "Fotografía tu recibo"
+receiptUpload.camera.button      — "Take Photo" / "Tomar Foto"
+receiptUpload.camera.guidance    — "Align receipt, ensure good lighting" / "Alinea el recibo con buena iluminación"
+receiptUpload.divider            — "or upload from files" / "o subir desde archivos"
+receiptUpload.fileButton         — "Choose File" / "Elegir Archivo"
+receiptUpload.dragDrop.title     — "Drag & drop your receipt here" / "Arrastra tu recibo aquí"
+receiptUpload.dragDrop.subtitle  — "or click to browse" / "o haz clic para buscar"
+receiptUpload.fileHint           — "JPEG · PNG · PDF · max 10MB" / "JPEG · PNG · PDF · máx 10MB"
+receiptUpload.optional.title     — "Optional details" / "Detalles opcionales"
+receiptUpload.optional.merchant  — "Merchant name" / "Nombre del comercio"
+receiptUpload.optional.date      — "Purchase date" / "Fecha de compra"
+receiptUpload.submitButton       — "Upload Receipt" / "Subir Recibo"
+receiptUpload.processing.title   — "Processing Receipt..." / "Procesando Recibo..."
+receiptUpload.processing.step1   — "Uploading image" / "Subiendo imagen"
+receiptUpload.processing.step2   — "Reading receipt" / "Leyendo recibo"
+receiptUpload.processing.step3   — "Matching products" / "Asociando productos"
+receiptUpload.processing.wait    — "This usually takes 10–15 seconds" / "Esto suele tardar 10–15 segundos"
+receiptUpload.error.tooLarge     — "File is too large. Maximum size is 10MB." / "El archivo es muy grande. El máximo es 10MB."
+receiptUpload.error.wrongType    — "Invalid file type. Please upload JPEG, PNG, or PDF." / "Tipo de archivo inválido. Sube JPEG, PNG o PDF."
+receiptUpload.error.uploadFailed — "Upload failed. Please try again." / "Fallo al subir. Inténtalo de nuevo."
+receiptUpload.error.processFailed — "Receipt processing failed. You can try again." / "Falló el procesamiento. Puedes intentarlo de nuevo."
+receiptUpload.success.toast      — "Receipt uploaded! Processing..." / "¡Recibo subido! Procesando..."
+```
+
+#### Accessibility Notes
+
+- Upload zone is a `<label>` wrapping a visually hidden `<input type="file">` — entire zone is keyboard activatable
+- Drag-drop zone announces "Drag and drop zone" via `aria-label`; `aria-dropeffect="copy"` during drag
+- Progress bar uses `role="progressbar"`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`
+- Processing steps use `aria-live="polite"` to announce step changes
+- Camera button has `aria-label="Open camera to photograph receipt"`
+- File selected state: announces file name via `aria-live="assertive"`
+- `prefers-reduced-motion`: disable progress bar animation, use static completion state
+
+---
+
+### 15.2 Screen: Receipts List Page
+
+#### Purpose
+
+View all receipts uploaded by the household, with filtering by date range and processing status. Entry point for receipt upload.
+
+#### Layout (ASCII wireframe)
+
+```
+┌─────────────────────────────┐
+│ Receipts            [+ ]    │  ← Title + Upload FAB
+├─────────────────────────────┤
+│ [All] [Processing] [Done]   │  ← Status filter tabs
+│ [Failed]                    │
+├─────────────────────────────┤
+│ 📅 Apr 1–Apr 5 (date range) │  ← Date range filter (collapsible)
+├─────────────────────────────┤
+│                             │
+│ ┌─────────────────────────┐ │
+│ │ [img] Supermarket XYZ   │ │  ← Receipt card
+│ │       Apr 3, 2026       │ │
+│ │       $49.14 · 12 items │ │
+│ │       ● COMPLETED ✓     │ │
+│ └─────────────────────────┘ │
+│                             │
+│ ┌─────────────────────────┐ │
+│ │ [img] Unknown Merchant  │ │
+│ │       Apr 1, 2026       │ │
+│ │       ⟳ PROCESSING      │ │
+│ └─────────────────────────┘ │
+│                             │
+│ ┌─────────────────────────┐ │
+│ │ [img] Mini Market       │ │
+│ │       Mar 30, 2026      │ │
+│ │       $23.50 · 5 items  │ │
+│ │       ✕ FAILED          │ │
+│ └─────────────────────────┘ │
+│                             │
+└─────────────────────────────┘
+```
+
+#### Components
+
+| Component              | shadcn/ui Base     | Purpose                                               |
+| ---------------------- | ------------------ | ----------------------------------------------------- |
+| Page header + FAB      | —                  | Title + Upload button (`Plus` icon, primary)          |
+| Status filter tabs     | `Tabs`             | All / Processing / Completed / Failed                 |
+| Date range filter      | `Collapsible`      | Collapsible section with two date inputs              |
+| Date inputs            | `Input`            | type="date", start and end                            |
+| Receipt card           | `Card`             | Thumbnail + merchant + date + total + status badge    |
+| Image thumbnail        | `img`              | 64×64px, `object-cover rounded`, from `imageUrl`      |
+| Status badge           | `StatusBadge`      | Custom (see §17.4) with icon + color per status       |
+| Total amount           | `PriceDisplay`     | Custom (see §17.5)                                    |
+| Empty state            | `EmptyState`       | No receipts at all or no match for filters            |
+| Loading skeleton       | `Skeleton`         | 4 skeleton receipt cards                              |
+
+#### Receipt Card Detail
+
+```
+┌──────────────────────────────────────────────┐
+│ [64px img] │  Supermarket XYZ               →│
+│            │  Apr 3, 2026                    │
+│            │  $49.14 · 12 items              │
+│            │  [● COMPLETED]                  │
+└──────────────────────────────────────────────┘
+```
+
+- Thumbnail: `w-16 h-16`, `object-cover`, `rounded-md`, fallback to `Receipt` icon on error
+- Merchant: `text-base font-medium`, fallback "Unknown Merchant" if `merchantName` is null
+- Date: `text-sm text-muted-foreground`
+- Total + item count: `text-sm text-muted-foreground` (only shown for COMPLETED receipts)
+- Status badge: right-aligned (see `StatusBadge` in §17.4)
+- Full card is tappable → `/receipts/[id]`
+- PROCESSING receipts: show spinner instead of price
+
+#### States
+
+- **Loading**: 4 skeleton cards with thumbnail placeholder + 3 text lines each
+- **Empty (no receipts)**: `Receipt` icon + "No receipts yet" + "Upload your first receipt to start tracking purchases" + "Upload Receipt" CTA button
+- **Empty (filtered)**: `Search` icon + "No {status} receipts" + "Clear filters" link
+- **Error**: "Could not load receipts" + retry
+- **Processing (polling)**: PROCESSING receipts poll status every 5 seconds; when status changes to COMPLETED/FAILED, card updates in place with `aria-live` announcement
+
+#### User Flow
+
+1. User taps Receipts tab → default view loads (all receipts, newest first)
+2. User taps status filter tabs to filter (e.g., only Failed)
+3. User expands date range filter → sets start/end dates → list filters
+4. User taps FAB / "Upload Receipt" → upload flow opens (see §15.1)
+5. User taps a receipt card → navigates to `/receipts/[id]`
+6. PROCESSING receipts auto-update when processing completes (polling or websocket)
+
+#### Responsive Behavior
+
+- **Mobile**: Single column cards, FAB is `size="icon"` in header, date filter collapsible
+- **Desktop**: Two-column grid cards (`grid-cols-2`), filter row stays visible (not collapsible), upload button shows full text "Upload Receipt"
+
+#### i18n Keys
+
+```
+receipts.title                   — "Receipts" / "Recibos"
+receipts.uploadButton            — "Upload Receipt" / "Subir Recibo"
+receipts.filter.all              — "All" / "Todos"
+receipts.filter.processing       — "Processing" / "Procesando"
+receipts.filter.completed        — "Completed" / "Completados"
+receipts.filter.failed           — "Failed" / "Fallidos"
+receipts.dateFilter.title        — "Date Range" / "Rango de fechas"
+receipts.dateFilter.from         — "From" / "Desde"
+receipts.dateFilter.to           — "To" / "Hasta"
+receipts.dateFilter.clear        — "Clear" / "Limpiar"
+receipts.card.merchant.unknown   — "Unknown Merchant" / "Comercio desconocido"
+receipts.card.items              — "{count} items" / "{count} artículos"
+receipts.card.processing         — "Processing..." / "Procesando..."
+receipts.status.PENDING          — "Pending" / "Pendiente"
+receipts.status.PROCESSING       — "Processing" / "Procesando"
+receipts.status.COMPLETED        — "Completed" / "Completado"
+receipts.status.FAILED           — "Failed" / "Fallido"
+receipts.empty.title             — "No receipts yet" / "Aún no hay recibos"
+receipts.empty.description       — "Upload your first receipt to start tracking purchases" / "Sube tu primer recibo para empezar a rastrear compras"
+receipts.empty.cta               — "Upload Receipt" / "Subir Recibo"
+receipts.empty.filtered          — "No {status} receipts" / "No hay recibos {status}"
+receipts.empty.clearFilters      — "Clear filters" / "Limpiar filtros"
+receipts.error.load              — "Could not load receipts" / "No se pudieron cargar los recibos"
+receipts.error.retry             — "Retry" / "Reintentar"
+```
+
+#### Accessibility Notes
+
+- Receipt cards are `<article>` with `aria-label="{merchant}, {date}, {status}"`
+- Status filter tabs: `role="tablist"` with `aria-selected`
+- Date range inputs: paired with visible `<label>` elements; associated via `htmlFor`
+- Processing status updates announced via `aria-live="polite"` region at page level
+- Upload FAB: `aria-label="Upload new receipt"`
+- Status badge: color + icon + text (never color alone); screen reader reads "Status: Completed"
+
+---
+
+### 15.3 Screen: Receipt Detail Page
+
+#### Purpose
+
+View the full parsed receipt: the original image alongside all extracted line items. Users can correct OCR errors inline. Failed receipts show the error and retry options.
+
+#### Layout (ASCII wireframe — Desktop, split view)
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ ← Receipts   Supermarket XYZ · Apr 3, 2026 [● COMPLETED]│
+├──────────────────────────┬──────────────────────────────┤
+│                          │  Items (12)                  │
+│   [Receipt Image]        │  ┌──────────────────────┐   │
+│   (zoomable/pannable)    │  │ Whole Milk ×2  $7.00 │✏️│   │
+│                          │  │ 🥛 Whole Milk (linked)│   │
+│   [🔍 Zoom in]           │  ├──────────────────────┤   │
+│   [🔍 Zoom out]          │  │ Chicken ×1     $8.20 │✏️│   │
+│                          │  │ 🥩 Chicken Breast     │   │
+│                          │  ├──────────────────────┤   │
+│                          │  │ ⚠️ "Lche entera" ×1  │✏️│  │
+│                          │  │ (unmatched)    $3.50  │   │
+│                          │  └──────────────────────┘   │
+│                          │                             │
+│                          │  ──────────────────────     │
+│                          │  Subtotal           $45.50  │
+│                          │  Tax                 $3.64  │
+│                          │  Total              $49.14  │
+│                          │                             │
+└──────────────────────────┴─────────────────────────────┘
+```
+
+#### Layout (ASCII wireframe — Mobile, stacked)
+
+```
+┌─────────────────────────────┐
+│ ← Receipts                  │
+│ Supermarket XYZ             │
+│ Apr 3, 2026 · ● COMPLETED   │
+├─────────────────────────────┤
+│ ▾ Receipt Image (tap to     │  ← Collapsible image section
+│   expand)                   │
+│ ┌─────────────────────────┐ │
+│ │  [receipt thumbnail]    │ │
+│ └─────────────────────────┘ │
+├─────────────────────────────┤
+│ Items (12)                  │
+│                             │
+│ ┌─────────────────────────┐ │
+│ │ Whole Milk ×2    $7.00  │ │  ← Item card (not table)
+│ │ 🥛 Whole Milk (linked) ✏️│ │
+│ └─────────────────────────┘ │
+│                             │
+│ ┌─────────────────────────┐ │
+│ │ ⚠️ "Lche entera" ×1    │ │  ← Unmatched (highlighted)
+│ │ Not linked       $3.50 ✏️│ │
+│ └─────────────────────────┘ │
+│                             │
+│ ──────────────────────────  │
+│ Subtotal             $45.50 │
+│ Tax                   $3.64 │
+│ Total                $49.14 │
+│                             │
+└─────────────────────────────┘
+```
+
+#### Failed Receipt Layout
+
+```
+┌─────────────────────────────┐
+│ ← Receipts                  │
+│ Unknown Merchant            │
+│ Apr 1, 2026 · ✕ FAILED      │
+├─────────────────────────────┤
+│                             │
+│ ⚠️ Processing Failed        │
+│ Could not extract text      │
+│ from image. Please upload   │
+│ a clearer photo.            │
+│                             │
+│ [🔄 Retry Processing]       │
+│ [🗑 Delete Receipt]         │
+│                             │
+│ ┌─────────────────────────┐ │
+│ │ [original image]        │ │
+│ └─────────────────────────┘ │
+└─────────────────────────────┘
+```
+
+#### Components
+
+| Component              | shadcn/ui Base       | Purpose                                            |
+| ---------------------- | -------------------- | -------------------------------------------------- |
+| Back button            | `Button`             | variant="ghost", links back to /receipts           |
+| Receipt header         | —                    | Merchant + date + status badge                     |
+| Status badge           | `StatusBadge`        | Custom (see §17.4)                                 |
+| Image panel            | —                    | Custom `ImageViewer` component (see §17.2)         |
+| Image collapse         | `Collapsible`        | Mobile: collapsible image section                  |
+| Zoom controls          | `Button`             | variant="outline", size="icon", +/- zoom           |
+| Items section header   | —                    | "Items ({count})" with section label               |
+| Item row (desktop)     | —                    | Table row: name, qty, unit price, total, edit btn  |
+| Item card (mobile)     | `Card`               | Card layout for each item (replaces table on mobile)|
+| Matched product link   | —                    | Product name + category icon, links to product     |
+| Unmatched indicator    | `Badge`              | variant="warning", `AlertCircle` icon, "Not linked"|
+| Edit item button       | `Button`             | variant="ghost", `Pencil` icon, opens correction modal|
+| Receipt summary        | —                    | Subtotal / Tax / Total in a summary section        |
+| Failed state           | `Alert`              | variant="destructive", error message + actions     |
+| Retry button           | `Button`             | variant="outline", `RefreshCw` icon                |
+| Delete button          | `Button`             | variant="destructive", `Trash2` icon               |
+
+#### Item Row / Card Detail
+
+```
+Desktop row:
+┌────────────────────────────────────────────────────────┐
+│ Whole Milk ×2  │  $3.50/unit  │  $7.00  │  🥛 Whole Milk │ ✏️ │
+└────────────────────────────────────────────────────────┘
+
+Mobile card (unmatched — highlighted):
+┌───────────────────────────────────────┐
+│ ⚠️  "Lche entera"                 ✏️  │  ← amber border
+│     ×1 · $3.50                        │
+│     [Not linked to a product]         │
+└───────────────────────────────────────┘
+```
+
+- Matched items: white background; product name + category icon below item name
+- Unmatched items: `border-warning/50 bg-warning/5` background; `AlertCircle` icon in amber; "Not linked to a product" label
+- Edit button: `Pencil` icon, opens Receipt Item Correction Modal (see §15.4)
+
+#### States
+
+- **Loading**: Skeleton image placeholder (tall rectangle) + skeleton items (8 rows of 4 columns)
+- **Processing (in-progress)**: Items section shows "Still processing... Check back in a moment." + spinner; image shown if available
+- **Completed**: Full layout as specified above
+- **Failed**: Error state with retry + delete; original image visible
+- **Error (load)**: "Could not load receipt details" + retry
+
+#### User Flow
+
+1. User arrives from receipts list → sees full receipt with image + items
+2. User taps `+` zoom on image → image zooms; can pan; taps `-` to zoom out
+3. User reviews items → spots unmatched (amber) item → taps edit `✏️`
+4. Correction modal opens (see §15.4) → user corrects → saves
+5. Item updates in list, amber indicator removed if now matched
+6. For FAILED receipts: user taps "Retry Processing" → receipt status resets to PENDING → processing restarts
+
+#### Responsive Behavior
+
+- **Desktop**: Fixed left panel (image, ~50% width, sticky while scrolling data panel); right panel scrollable with items table
+- **Mobile**: Stacked layout — collapsible image at top (collapsed by default to save space), items as cards below (not a table), summary section at bottom
+- Image panel breakpoint: `hidden md:block` for sticky panel; mobile uses `Collapsible`
+
+#### i18n Keys
+
+```
+receiptDetail.backButton          — "Receipts" / "Recibos"
+receiptDetail.merchant.unknown    — "Unknown Merchant" / "Comercio desconocido"
+receiptDetail.image.title         — "Receipt Image" / "Imagen del recibo"
+receiptDetail.image.expand        — "View receipt image" / "Ver imagen del recibo"
+receiptDetail.image.collapse      — "Hide receipt image" / "Ocultar imagen del recibo"
+receiptDetail.image.zoomIn        — "Zoom in" / "Acercar"
+receiptDetail.image.zoomOut       — "Zoom out" / "Alejar"
+receiptDetail.items.title         — "Items ({count})" / "Artículos ({count})"
+receiptDetail.items.name          — "Item" / "Artículo"
+receiptDetail.items.qty           — "Qty" / "Cant."
+receiptDetail.items.unitPrice     — "Unit price" / "Precio unitario"
+receiptDetail.items.total         — "Total" / "Total"
+receiptDetail.items.product       — "Linked product" / "Producto asociado"
+receiptDetail.items.unmatched     — "Not linked to a product" / "No asociado a un producto"
+receiptDetail.items.edit          — "Edit item" / "Editar artículo"
+receiptDetail.items.processing    — "Still processing... Check back in a moment." / "Aún procesando... Vuelve en un momento."
+receiptDetail.summary.subtotal    — "Subtotal" / "Subtotal"
+receiptDetail.summary.tax         — "Tax" / "Impuesto"
+receiptDetail.summary.total       — "Total" / "Total"
+receiptDetail.failed.title        — "Processing Failed" / "Procesamiento fallido"
+receiptDetail.failed.retry        — "Retry Processing" / "Reintentar procesamiento"
+receiptDetail.failed.delete       — "Delete Receipt" / "Eliminar recibo"
+receiptDetail.failed.deleteConfirm — "Delete this receipt?" / "¿Eliminar este recibo?"
+receiptDetail.failed.deleteDescription — "This cannot be undone." / "Esta acción no se puede deshacer."
+receiptDetail.error.load          — "Could not load receipt details" / "No se pudieron cargar los detalles del recibo"
+```
+
+#### Accessibility Notes
+
+- Image viewer: `role="img"` with `aria-label="Receipt image from {merchant} on {date}"`; zoom buttons have `aria-label`
+- Items table (desktop): proper `<table>` with `<thead>` and `<th scope="col">` headers; each `<tr>` has `aria-label`
+- Item cards (mobile): each card has `aria-label="{item name}, quantity: {qty}, total: {price}"`
+- Unmatched items: `role="alert"` is too noisy here; use `aria-label` on the warning badge instead: "This item is not linked to a product"
+- Edit buttons: `aria-label="Edit {item name}"`
+- Retry/Delete for failed: `AlertDialog` for delete confirmation; Cancel auto-focused
+- Collapsible image on mobile: `aria-expanded`, toggle button with clear label
+
+---
+
+### 15.4 Screen: Receipt Item Correction Modal
+
+#### Purpose
+
+Allow users to fix OCR errors in a single receipt item: correct name, quantity, price, or re-link to a different product in the catalog. Preserves original OCR value for reference.
+
+#### Layout (ASCII wireframe)
+
+```
+┌──────────────────────────────┐
+│ Edit Item                  ✕ │
+├──────────────────────────────┤
+│ Original: "Lche entera"      │  ← Original OCR value (muted, read-only)
+│                              │
+│ Name                         │
+│ ┌────────────────────────┐   │
+│ │ Leche entera           │   │  ← Editable (corrected name)
+│ └────────────────────────┘   │
+│                              │
+│ Quantity       Unit Price    │
+│ ┌───────────┐ ┌───────────┐  │
+│ │ 1         │ │ $3.50     │  │
+│ └───────────┘ └───────────┘  │
+│                              │
+│ Total Price                  │
+│ ┌────────────────────────┐   │
+│ │ $3.50                  │   │
+│ └────────────────────────┘   │
+│                              │
+│ Link to product              │
+│ ┌────────────────────────┐   │
+│ │ 🔍 Search products...  │   │  ← ProductAutocomplete (see §17.6)
+│ └────────────────────────┘   │
+│ ┌────────────────────────┐   │
+│ │ 🥛 Whole Milk          │   │  ← Suggestion / current link
+│ │ Dairy · $3.50 avg      │   │
+│ └────────────────────────┘   │
+│                              │
+│ [+ Create new product]       │  ← If no match found
+│                              │
+│ [  Cancel  ]   [  Save  ]    │
+└──────────────────────────────┘
+```
+
+#### Components
+
+| Component              | shadcn/ui Base     | Purpose                                               |
+| ---------------------- | ------------------ | ----------------------------------------------------- |
+| Dialog container       | `Dialog`           | Modal (both mobile and desktop)                       |
+| Title                  | `DialogTitle`      | "Edit Item"                                           |
+| Original value label   | —                  | `text-xs text-muted-foreground italic`, read-only     |
+| Name input             | `Input`            | Pre-filled with current name                         |
+| Quantity input         | `Input`            | type="number", `inputMode="decimal"`                  |
+| Unit price input       | `Input`            | type="number", `inputMode="decimal"`, currency prefix|
+| Total price input      | `Input`            | type="number", auto-calculated but editable           |
+| Product autocomplete   | —                  | Custom `ProductAutocomplete` (see §17.6)              |
+| Product suggestion card| `Card`             | Category icon + name + avg price; tappable selection  |
+| Create product link    | `Button`           | variant="ghost", `Plus` icon, opens new product flow  |
+| Cancel button          | `Button`           | variant="outline"                                     |
+| Save button            | `Button`           | variant="default", calls `PATCH /receipts/:id/items/:itemId`|
+
+#### Original OCR Value Display
+
+```
+┌──────────────────────────────────────────┐
+│ Original OCR: "Lche entera"  [← muted]  │
+└──────────────────────────────────────────┘
+```
+
+- Always shown as reference regardless of how many times the item is edited
+- Styled: `text-xs text-muted-foreground italic`
+- Label: "Original OCR:" in bold, then value in normal weight
+- Cannot be changed (informational only)
+
+#### Product Autocomplete Behavior
+
+1. User starts typing in the product search → debounce 300ms → `GET /products?search={query}`
+2. Results show as dropdown: category icon + product name + avg price
+3. User selects a product → product linked; displays as selected product card below
+4. User can clear selection (× button on selected card) to unlink
+5. If no results: shows "No products found" + "Create new product" option
+6. "Create new product" pre-fills the product name from the corrected item name → opens brief product creation flow inline
+
+#### States
+
+- **Loading (save)**: Save button disabled + spinner
+- **Validation error**: Name required; quantity and prices must be > 0
+- **Product search loading**: Small spinner inside autocomplete input
+- **No product match**: "No products found" message + "Create new product" option
+- **Success**: Dialog closes; item in receipt updates; toast "Item updated"
+
+#### User Flow
+
+1. User taps `✏️` on a receipt item → correction dialog opens
+2. Dialog shows original OCR value + current parsed values pre-filled
+3. User corrects name → types in product search → selects from suggestions
+4. Quantity / price auto-calculated (total = qty × unit price) but editable independently
+5. User taps "Save" → API `PATCH /receipts/:id/items/:itemId`
+6. Dialog closes; item row updates; if product linked, amber warning removed
+
+#### i18n Keys
+
+```
+itemCorrection.title             — "Edit Item" / "Editar Artículo"
+itemCorrection.original          — "Original OCR:" / "OCR original:"
+itemCorrection.nameLabel         — "Name" / "Nombre"
+itemCorrection.quantityLabel     — "Quantity" / "Cantidad"
+itemCorrection.unitPriceLabel    — "Unit Price" / "Precio unitario"
+itemCorrection.totalPriceLabel   — "Total Price" / "Precio total"
+itemCorrection.linkProduct       — "Link to product" / "Asociar a producto"
+itemCorrection.searchProduct     — "Search products..." / "Buscar productos..."
+itemCorrection.noProductFound    — "No products found" / "No se encontraron productos"
+itemCorrection.createProduct     — "Create new product" / "Crear nuevo producto"
+itemCorrection.selectedProduct   — "Linked to: {name}" / "Asociado a: {name}"
+itemCorrection.clearProduct      — "Clear product link" / "Quitar asociación"
+itemCorrection.saveButton        — "Save" / "Guardar"
+itemCorrection.cancelButton      — "Cancel" / "Cancelar"
+itemCorrection.validation.nameRequired — "Item name is required" / "El nombre es obligatorio"
+itemCorrection.validation.quantityMin  — "Quantity must be greater than 0" / "La cantidad debe ser mayor a 0"
+itemCorrection.validation.priceMin     — "Price must be greater than 0" / "El precio debe ser mayor a 0"
+itemCorrection.success           — "Item updated" / "Artículo actualizado"
+```
+
+#### Accessibility Notes
+
+- Dialog traps focus; Escape closes (preserving edits is intentional — user must tap Cancel to discard)
+- Original OCR value: `aria-label="Original OCR value: {value}"`, not interactive
+- Quantity and price inputs: `inputMode="decimal"` for mobile numeric keyboard
+- Total price auto-calculation announced via `aria-live="polite"` when it updates
+- Product autocomplete dropdown: `role="listbox"` / `role="option"` for keyboard navigation (up/down arrows, Enter to select)
+- "Create new product" button: `aria-label="Create a new product named {itemName}"`
+- Cancel should be default focus (not save) to prevent accidental saves
+
+---
+
+## 16. Enhanced Add-Item Flow
+
+### 16.1 Screen: List Detail — Product Autocomplete Update
+
+#### Purpose
+
+Upgrade the existing "quick add" input in List Detail (§6.3) to suggest matching products from the catalog as the user types. Selecting a product pre-fills the unit and links the `productId`. Free-text entry still allowed for unlinked items.
+
+#### Layout Update (ASCII wireframe — suggestion dropdown open)
+
+```
+┌─────────────────────────────┐
+│ ← Weekly Groceries  [···]   │
+│ 🟢 Active  ·  8 items       │
+├─────────────────────────────┤
+│                             │
+│  [item list...]             │
+│                             │
+├─────────────────────────────┤
+│ ┌─────────────────────────┐ │
+│ │ [+] milk              ↑ │ │  ← Quick-add input with text typed
+│ └─────────────────────────┘ │
+│ ┌─────────────────────────┐ │  ← Suggestion dropdown (above input)
+│ │ 🥛 Whole Milk    $3.50  │ │  ← Suggestion row 1
+│ │    Dairy · UNIT         │ │
+│ ├─────────────────────────┤ │
+│ │ 🥛 Skim Milk     $2.80  │ │  ← Suggestion row 2
+│ │    Dairy · UNIT         │ │
+│ ├─────────────────────────┤ │
+│ │ ── Free text entry ──── │ │  ← Divider: use as-typed or select
+│ │ Add "milk" as new item  │ │
+│ └─────────────────────────┘ │
+└─────────────────────────────┘
+```
+
+#### Behavior
+
+| User Action                              | System Response                                                         |
+| ---------------------------------------- | ----------------------------------------------------------------------- |
+| Type ≥2 characters                       | Query `GET /products?search={query}&limit=5`; show dropdown (debounced 300ms) |
+| Select a product suggestion              | Pre-fill name + unit from product; set `productId`; add to list; input clears |
+| Select "Add '{text}' as new item"         | Add item with typed name; no `productId`; input clears                  |
+| Press Enter with no suggestion selected  | Add item as free text (same as before); input clears                    |
+| No products match                        | Only show "Add '{text}' as new item" option                             |
+| Press Escape                             | Close dropdown; keep focus on input                                     |
+
+#### Suggestion Row Detail
+
+```
+┌──────────────────────────────────────────────────────┐
+│  [🥛]  Whole Milk                          $3.50 avg │
+│         Dairy · UNIT                                 │
+└──────────────────────────────────────────────────────┘
+```
+
+- Category icon: `w-5 h-5`, left side
+- Product name: `text-sm font-medium`
+- Category + unit: `text-xs text-muted-foreground`
+- Average price: `text-xs text-muted-foreground`, right-aligned, only shown if `averagePrice` exists
+- Highlighted on hover/focus: `bg-muted`
+- Touch target: min `h-12` (48px) for comfortable tapping while shopping
+
+#### Visual Feedback on Selection
+
+When a product suggestion is selected:
+- Input briefly shows selected product name (200ms) then clears — rapid-add experience preserved
+- Small product category icon appears in the input prefix area momentarily
+- Toast: optional, skip for quick-add to avoid disrupting shopping flow
+
+#### States
+
+- **Idle (< 2 chars)**: No dropdown; input shows placeholder
+- **Loading suggestions**: Spinner in input suffix; dropdown not yet shown
+- **Suggestions available**: Dropdown with matching products + free-text option at bottom
+- **No matches**: Dropdown shows only "Add '{text}' as new item"
+- **Selected (product)**: Item added with product link; input clears; no dropdown
+- **Selected (free text)**: Item added without product link; input clears
+
+#### i18n Keys
+
+```
+quickAdd.placeholder           — "Add an item..." / "Agregar un artículo..."
+quickAdd.addFreeText           — "Add \"{text}\" as new item" / "Agregar \"{text}\" como nuevo artículo"
+quickAdd.suggestion.avgPrice   — "avg" / "prom."
+quickAdd.searching             — "Searching..." / "Buscando..."
+quickAdd.noResults             — "No matching products" / "Sin productos coincidentes"
+quickAdd.productLinked         — "Linked to {product}" / "Asociado a {product}"
+```
+
+#### Accessibility Notes
+
+- Suggestion dropdown: `role="listbox"` with `id` referenced by `aria-owns` on the input
+- Input has `aria-expanded="true"` when dropdown is open, `aria-haspopup="listbox"`
+- Each suggestion: `role="option"`, `aria-selected="false"` (or true when selected)
+- Keyboard navigation: ArrowDown opens/navigates dropdown; ArrowUp navigates; Enter selects; Escape closes
+- When suggestion selected, announce via `aria-live="polite"`: "Added {product name} to list"
+- When free-text added, announce: "Added {name} to list"
+- Price information in suggestions is decorative for quick-add context; not critical for screen reader flow
+
+---
+
+## 17. Phase 2 Common Components
+
+### 17.1 Component: FileUpload
+
+#### Purpose
+
+Handles file selection from both camera (mobile) and file picker / drag-drop (desktop). Wraps the native file input with accessible custom UI.
+
+#### Variants
+
+**Mobile variant:**
+```
+┌──────────────────────────────────────┐
+│                                      │
+│    [📷 Camera icon, 48px]            │
+│                                      │
+│    Photograph your receipt           │
+│    Ensure good lighting              │
+│                                      │
+│    [📷  Take Photo]                  │  ← Primary button, full width
+│    [📂  Choose from files]           │  ← Secondary button
+│                                      │
+└──────────────────────────────────────┘
+```
+
+**Desktop variant (drag-drop zone):**
+```
+┌─────────────────────────────────────────┐
+│                                         │
+│          [↑  Upload icon, 40px]         │
+│                                         │
+│    Drag & drop your receipt here        │
+│    or  [click to browse]                │  ← inline link
+│                                         │
+│    JPEG · PNG · PDF · max 10MB          │
+│                                         │
+└─────────────────────────────────────────┘  (dashed border, rounded-lg)
+```
+
+**Drag-active state (desktop):**
+```
+┌─────────────────────────────────────────┐
+│  ┌─────────────────────────────────┐    │  ← border becomes solid primary
+│  │  Drop here to upload            │    │
+│  └─────────────────────────────────┘    │  ← bg changes to primary/5
+└─────────────────────────────────────────┘
+```
+
+**File selected state (both):**
+```
+┌──────────────────────────────────────┐
+│  [image thumbnail / pdf icon]        │
+│  receipt_photo.jpg                   │
+│  2.3 MB                              │
+│  [✕  Remove]                         │
+└──────────────────────────────────────┘
+```
+
+#### Props (for Frontend Developer)
+
+```typescript
+interface FileUploadProps {
+  onFileSelect: (file: File) => void;
+  onFileRemove: () => void;
+  accept?: string;         // default: ".jpg,.jpeg,.png,.pdf"
+  maxSizeMb?: number;      // default: 10
+  variant?: 'camera' | 'dropzone';  // camera on mobile, dropzone on desktop
+  selectedFile?: File | null;
+  error?: string;
+}
+```
+
+#### shadcn/ui Base: None (custom), using hidden `Input type="file"` + `Button` + `Card`
+
+---
+
+### 17.2 Component: ImageViewer
+
+#### Purpose
+
+Display receipt images with pan and zoom controls. Used in Receipt Detail (both mobile and desktop).
+
+#### Layout
+
+```
+┌──────────────────────────────────────┐
+│  [receipt image, fills container]    │
+│                                      │
+│  ┌────────────────────────────────┐  │
+│  │ [-]   50%   [+]   [⤢ Fullscreen]│  │  ← Zoom controls bar at bottom
+│  └────────────────────────────────┘  │
+└──────────────────────────────────────┘
+```
+
+- Pinch-to-zoom on mobile (native CSS touch-action)
+- Scroll-to-zoom on desktop (mouse wheel)
+- Pan by dragging (touch on mobile, mouse drag on desktop)
+- Zoom range: 50%–300% in 25% steps via buttons
+- Fullscreen button: native `requestFullscreen()` API, with fallback
+- `prefers-reduced-motion`: disable zoom transition animation
+
+#### Props (for Frontend Developer)
+
+```typescript
+interface ImageViewerProps {
+  src: string;
+  alt: string;
+  className?: string;
+}
+```
+
+#### shadcn/ui Base: None (custom). Consider `@use-gesture/react` for gesture handling.
+
+---
+
+### 17.3 Component: CategoryChip
+
+#### Purpose
+
+Selectable filter chip representing a product category, with category icon and name. Used in Product Catalog filter bar.
+
+#### Variants
+
+```
+Inactive:  [🥛 Dairy]     border, bg-background, text-foreground
+Active:    [🥛 Dairy]     bg-primary, text-primary-foreground, no border
+All chip:  [All]          special "all categories" chip
+```
+
+#### Layout
+
+```
+┌──────────────────┐
+│  [🥛]  Dairy     │   h-8, px-3, rounded-full, text-xs font-medium
+└──────────────────┘
+```
+
+- Minimum touch target: enforce by wrapping in `min-h-[44px]` container or adding vertical padding
+- Icon: `w-4 h-4` Lucide icon mapped per category (see §13.2)
+- Gap between chips: `gap-2`
+- Horizontal scroll container: `overflow-x-auto`, scrollbar hidden on mobile
+
+#### Props (for Frontend Developer)
+
+```typescript
+interface CategoryChipProps {
+  category: { id: string; name: string; icon?: string };
+  isActive: boolean;
+  onClick: () => void;
+}
+```
+
+#### shadcn/ui Base: Custom, using `Button` as primitive (`variant="outline"` modified with Tailwind)
+
+---
+
+### 17.4 Component: StatusBadge
+
+#### Purpose
+
+Color-coded badge displaying the processing status of a receipt. Uses both color and icon (never color alone).
+
+#### Variants
+
+```
+PENDING:    [○ Pending]      bg-muted text-muted-foreground    Clock icon
+PROCESSING: [⟳ Processing]   bg-amber-100 text-amber-800       Loader2 icon (spinning)
+COMPLETED:  [✓ Completed]    bg-green-100 text-green-800       CheckCircle2 icon
+FAILED:     [✕ Failed]       bg-red-100 text-red-800           XCircle icon
+```
+
+- Height: `h-6`, padding: `px-2`, font: `text-xs font-medium`
+- Icon: `w-3 h-3`, `mr-1`
+- PROCESSING spinner: `animate-spin` (respect `prefers-reduced-motion` — show static icon if reduced)
+- Dark mode: adjusted bg/text tokens for visibility
+
+#### Props (for Frontend Developer)
+
+```typescript
+type ReceiptStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+
+interface StatusBadgeProps {
+  status: ReceiptStatus;
+}
+```
+
+#### shadcn/ui Base: `Badge` (customized with color overrides via Tailwind variants)
+
+---
+
+### 17.5 Component: PriceDisplay
+
+#### Purpose
+
+Formatted currency display with locale-aware formatting. Handles null/undefined prices gracefully.
+
+#### Variants
+
+```
+Standard:   $3.50          text-sm
+Large:      $49.14         text-lg font-semibold
+Muted:      $3.50          text-sm text-muted-foreground
+Trend up:   ↑ $3.80        text-sm text-destructive + TrendingUp icon
+Trend down: ↓ $3.20        text-sm text-success + TrendingDown icon
+Null:       —              text-muted-foreground (em-dash placeholder)
+```
+
+#### Props (for Frontend Developer)
+
+```typescript
+interface PriceDisplayProps {
+  amount: number | null | undefined;
+  currency?: string;    // default: "USD" (configurable)
+  variant?: 'standard' | 'large' | 'muted' | 'trend-up' | 'trend-down';
+  className?: string;
+}
+```
+
+#### Note on Currency
+
+For Spanish-speaking countries, the currency symbol and format will vary (e.g., COP, MXN, ARS). The `currency` prop accepts any ISO 4217 code. The `Intl.NumberFormat` API handles locale-specific formatting. For Phase 2, default to USD; currency settings can be a household preference in Phase 3.
+
+#### shadcn/ui Base: None (custom, pure display component)
+
+---
+
+### 17.6 Component: ProductAutocomplete
+
+#### Purpose
+
+Search input with a dropdown of matching products from the catalog. Used in Quick-Add (§16.1) and Receipt Item Correction (§15.4).
+
+#### Layout (active / dropdown open)
+
+```
+┌──────────────────────────────────────────┐
+│ 🔍  milk                          [⟳]   │  ← search icon prefix + spinner
+└──────────────────────────────────────────┘
+┌──────────────────────────────────────────┐  ← dropdown (above or below input)
+│ 🥛  Whole Milk                  $3.50    │  ← option row
+│     Dairy · UNIT                         │
+├──────────────────────────────────────────┤
+│ 🥛  Skim Milk                   $2.80    │
+│     Dairy · UNIT                         │
+├──────────────────────────────────────────┤
+│     No other matches                     │  ← if < 5 results
+└──────────────────────────────────────────┘
+```
+
+#### Dropdown Positioning
+
+- Default: renders above the input when input is near the bottom of the screen (bottom sheet context)
+- Default: renders below the input when there's room above
+- Uses `@radix-ui/react-popover` for positioning (already available via shadcn/ui)
+
+#### Props (for Frontend Developer)
+
+```typescript
+interface ProductAutocompleteProps {
+  value: string;
+  onChange: (value: string) => void;
+  onProductSelect: (product: Product) => void;
+  placeholder?: string;
+  autoFocus?: boolean;
+  className?: string;
+}
+```
+
+#### shadcn/ui Base: `Command` (cmdk-based search/filter component from shadcn/ui). Alternatively, `Popover` + custom `Input` + results list.
+
+---
+
+## 18. Phase 2 Component Inventory
+
+### New shadcn/ui Components Required for Phase 2
+
+| Component       | Usage                                                     |
+| --------------- | --------------------------------------------------------- |
+| `Progress`      | Upload progress bar in FileUpload / receipt upload flow   |
+| `Collapsible`   | Already in Phase 1; used for image panel on mobile        |
+| `Command`       | Base for ProductAutocomplete dropdown search              |
+| `Popover`       | Positioning container for autocomplete dropdown           |
+| `Sheet`         | Already in Phase 1; used for upload on mobile             |
+| `Calendar`      | (Optional) Date range picker in Receipts list filters     |
+| `Separator`     | Already in Phase 1; used in receipt summary section       |
+
+> Note: `Sheet`, `Collapsible`, and `Separator` are already installed from Phase 1.
+
+### New Custom Components to Build
+
+| Component              | File Path (suggested)                               | Purpose                                      |
+| ---------------------- | --------------------------------------------------- | -------------------------------------------- |
+| `FileUpload`           | `components/features/receipts/file-upload/`         | Camera + drag-drop file selection            |
+| `ImageViewer`          | `components/features/receipts/image-viewer/`        | Zoomable/pannable image display              |
+| `CategoryChip`         | `components/features/products/category-chip/`       | Selectable filter chip with category icon    |
+| `StatusBadge`          | `components/ui/status-badge/`                       | Receipt processing status badge              |
+| `PriceDisplay`         | `components/ui/price-display/`                      | Formatted currency display                   |
+| `ProductAutocomplete`  | `components/features/products/product-autocomplete/`| Product search input with suggestions        |
+| `ReceiptCard`          | `components/features/receipts/receipt-card/`        | Receipt list item card                       |
+| `ProductCard`          | `components/features/products/product-card/`        | Product list item card                       |
+| `PurchaseTimeline`     | `components/features/products/purchase-timeline/`   | Product purchase history timeline            |
+| `ReceiptItemRow`       | `components/features/receipts/receipt-item-row/`    | Single item row in receipt detail            |
+| `ReceiptSummary`       | `components/features/receipts/receipt-summary/`     | Subtotal/tax/total summary section           |
+| `ProcessingSteps`      | `components/features/receipts/processing-steps/`    | Step indicator during receipt upload         |
+
+### Updated Skeleton Patterns for Phase 2
+
+| Screen               | Skeleton Pattern                                                              |
+| -------------------- | ----------------------------------------------------------------------------- |
+| Product Catalog      | 6 cards: icon circle + 2 text lines + short metadata line                     |
+| Product Detail       | Large icon + 3 lines; trend block; 5 history rows (date + price + link)       |
+| Receipt List         | 4 cards: 64×64 square + 3 lines (merchant, date, status)                      |
+| Receipt Detail       | Tall rectangle (image) + 8 rows of 4 columns each (items table)               |
+
+---
+
+## 19. Phase 2 Design Decisions
+
+### Q6: Split view or stacked for Receipt Detail?
+
+**Decision: Split view on desktop (image left, data right); stacked on mobile with collapsible image.**
+
+Rationale: On desktop, having the image and parsed data side-by-side allows users to verify OCR accuracy by comparing the two simultaneously — this is the core value of the receipt detail screen. On mobile, the screen is too narrow for a split view. A collapsible image section (collapsed by default) saves vertical space while keeping the image accessible when needed.
+
+### Q7: Should the product autocomplete in Quick-Add pre-select a product automatically?
+
+**Decision: No auto-selection. Always require explicit user selection.**
+
+Rationale: Auto-selecting the top match could add the wrong product silently. Since the quick-add is used rapidly while shopping (items are added quickly, one after another), a silent wrong match would go unnoticed. The user must actively select a suggestion or press Enter to add as free text. This keeps the intent clear with zero risk of incorrect product linking.
+
+### Q8: How to communicate receipt processing wait time?
+
+**Decision: Step-indicator with friendly time estimate ("10–15 seconds").**
+
+Rationale: A bare spinner during 10–15 seconds feels broken. A progress bar alone feels arbitrary. A three-step indicator (Uploading → Reading receipt → Matching products) gives users a sense of progress and shows what the system is doing. The time estimate manages expectations proactively. Steps animate forward even if the actual processing completes faster (to avoid jarring instant completions).
+
+### Q9: Camera vs file upload on mobile — which is primary?
+
+**Decision: Camera is primary on mobile. File picker is secondary ("or upload from files").**
+
+Rationale: The primary use case on mobile is photographing a physical receipt in-store or at home immediately after purchase. The camera enables this without intermediate steps. File upload covers the case of pre-existing photos in the gallery. The UI hierarchy reflects this: camera button is large and prominent; file picker is a smaller secondary option.
+
+### Q10: What happens when an OCR item can't be matched to any product?
+
+**Decision: Highlight unmatched items with amber warning + edit button. Do not block receipt completion.**
+
+Rationale: Strict product matching would block users from viewing their receipt if any item couldn't be matched. Instead, the receipt is marked as COMPLETED once parsing is done (even if some items are unmatched). Unmatched items are visually flagged in amber so users know which items may need correction. Users can fix them at their convenience — the correction is optional, not mandatory.
+
+### Q11: Should receipt list receipts poll for status updates?
+
+**Decision: Poll every 5 seconds for PROCESSING receipts; stop polling once terminal state (COMPLETED or FAILED).**
+
+Rationale: WebSockets would be ideal but add infrastructure complexity for Phase 2. Simple polling (5s interval) is straightforward to implement and gives a good UX for the typical 10–15 second processing time. The frontend should only poll when there are receipts in PROCESSING state, and stop immediately when all receipts reach terminal states. This avoids unnecessary server load.
+
+### Q12: Should Household move out of the bottom nav on mobile?
+
+**Decision: Yes. Household moves to Profile submenu on mobile (4-tab nav: Lists, Products, Receipts, Profile).**
+
+Rationale: 4 tabs is approaching the maximum comfortable count for a bottom nav. Household settings is accessed infrequently (a few times after initial setup) compared to the four primary activities (listing, products, receipts, profile). Moving it to a Profile submenu reduces nav clutter without hiding it — users will find it in Profile settings, which is the natural place for "household / account settings."
