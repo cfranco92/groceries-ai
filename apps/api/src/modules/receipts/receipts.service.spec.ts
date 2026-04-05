@@ -197,7 +197,7 @@ describe('ReceiptsService', () => {
       );
     });
 
-    it('should filter by date range', async () => {
+    it('should filter by date range with endDate inclusive of full day', async () => {
       prisma.receipt.findMany.mockResolvedValue([] as never);
       prisma.receipt.count.mockResolvedValue(0 as never);
 
@@ -206,15 +206,17 @@ describe('ReceiptsService', () => {
         endDate: '2026-04-30',
       });
 
-      expect(prisma.receipt.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            purchaseDate: {
-              gte: new Date('2026-04-01'),
-              lte: new Date('2026-04-30'),
-            },
-          }),
-        }),
+      const call = prisma.receipt.findMany.mock.calls[0]![0] as {
+        where: { purchaseDate: { gte: Date; lte: Date } };
+      };
+      expect(call.where.purchaseDate.gte).toEqual(new Date('2026-04-01'));
+      // endDate should be end-of-day (23:59:59.999), not midnight
+      const endDate = call.where.purchaseDate.lte;
+      expect(endDate.getTime()).toBeGreaterThan(
+        new Date('2026-04-30').getTime(),
+      );
+      expect(endDate.getTime()).toBeLessThan(
+        new Date('2026-05-01').getTime(),
       );
     });
   });
@@ -291,7 +293,7 @@ describe('ReceiptsService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should delete file from storage and receipt from DB', async () => {
+    it('should delete DB record first, then storage (best-effort)', async () => {
       prisma.receipt.findFirst.mockResolvedValue({
         id: 'receipt-1',
         imageUrl: 'receipts/household-1/test.jpg',
@@ -301,12 +303,26 @@ describe('ReceiptsService', () => {
 
       await service.remove(adminUser, 'receipt-1');
 
-      expect(storageService.delete).toHaveBeenCalledWith(
-        'receipts/household-1/test.jpg',
-      );
       expect(prisma.receipt.delete).toHaveBeenCalledWith({
         where: { id: 'receipt-1' },
       });
+      expect(storageService.delete).toHaveBeenCalledWith(
+        'receipts/household-1/test.jpg',
+      );
+    });
+
+    it('should not fail if storage delete throws', async () => {
+      prisma.receipt.findFirst.mockResolvedValue({
+        id: 'receipt-1',
+        imageUrl: 'receipts/household-1/test.jpg',
+        householdId: 'household-1',
+      } as never);
+      prisma.receipt.delete.mockResolvedValue({} as never);
+      storageService.delete.mockRejectedValueOnce(new Error('GCS error'));
+
+      await expect(
+        service.remove(adminUser, 'receipt-1'),
+      ).resolves.not.toThrow();
     });
   });
 });

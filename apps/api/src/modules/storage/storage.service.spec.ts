@@ -1,16 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs';
 import { StorageService } from './storage.service';
 
 jest.mock('fs', () => ({
   existsSync: jest.fn().mockReturnValue(true),
   mkdirSync: jest.fn(),
-  writeFileSync: jest.fn(),
-  unlinkSync: jest.fn(),
+  promises: {
+    mkdir: jest.fn().mockResolvedValue(undefined),
+    writeFile: jest.fn().mockResolvedValue(undefined),
+    unlink: jest.fn().mockResolvedValue(undefined),
+  },
 }));
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-const fs = require('fs');
 
 jest.mock('@google-cloud/storage', () => ({
   Storage: jest.fn().mockImplementation(() => ({
@@ -25,6 +26,8 @@ jest.mock('@google-cloud/storage', () => ({
     }),
   })),
 }));
+
+const mockedFsPromises = jest.mocked(fs.promises);
 
 describe('StorageService', () => {
   describe('with GCS configured', () => {
@@ -64,6 +67,18 @@ describe('StorageService', () => {
       expect(key).toMatch(/^receipts\/household-1\/.+\.jpg$/);
     });
 
+    it('should derive extension from mimeType when filename extension mismatches', async () => {
+      const buffer = Buffer.from('fake-image-data');
+      const key = await service.upload(
+        buffer,
+        'receipt.exe',
+        'image/jpeg',
+        'household-1',
+      );
+
+      expect(key).toMatch(/\.jpg$/);
+    });
+
     it('should return a signed URL', async () => {
       const url = await service.getSignedUrl('receipts/household-1/test.jpg');
 
@@ -82,7 +97,9 @@ describe('StorageService', () => {
 
     beforeEach(async () => {
       jest.clearAllMocks();
-      fs.existsSync.mockReturnValue(true);
+      (mockedFsPromises.mkdir as jest.Mock).mockResolvedValue(undefined);
+      (mockedFsPromises.writeFile as jest.Mock).mockResolvedValue(undefined);
+      (mockedFsPromises.unlink as jest.Mock).mockResolvedValue(undefined);
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [
@@ -109,7 +126,7 @@ describe('StorageService', () => {
       );
 
       expect(key).toMatch(/^receipts\/household-1\/.+\.png$/);
-      expect(fs.writeFileSync).toHaveBeenCalled();
+      expect(mockedFsPromises.writeFile).toHaveBeenCalled();
     });
 
     it('should return file:// URL for signed URL fallback', async () => {
@@ -120,15 +137,15 @@ describe('StorageService', () => {
     });
 
     it('should delete local file', async () => {
-      fs.existsSync.mockReturnValue(true);
-
       await service.delete('receipts/household-1/test.jpg');
 
-      expect(fs.unlinkSync).toHaveBeenCalled();
+      expect(mockedFsPromises.unlink).toHaveBeenCalled();
     });
 
     it('should not throw when deleting non-existent local file', async () => {
-      fs.existsSync.mockReturnValue(false);
+      (mockedFsPromises.unlink as jest.Mock).mockRejectedValueOnce(
+        new Error('ENOENT'),
+      );
 
       await expect(
         service.delete('receipts/household-1/nonexistent.jpg'),

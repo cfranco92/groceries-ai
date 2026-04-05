@@ -38,7 +38,12 @@ export class StorageService {
     mimeType: string,
     householdId: string,
   ): Promise<string> {
-    const ext = path.extname(filename) || this.extensionFromMime(mimeType);
+    const mimeExtension = this.extensionFromMime(mimeType);
+    const filenameExtension = path.extname(filename).toLowerCase();
+    const ext =
+      mimeExtension && filenameExtension === mimeExtension
+        ? filenameExtension
+        : mimeExtension;
     const key = `receipts/${householdId}/${randomUUID()}${ext}`;
 
     if (this.storage && this.bucketName) {
@@ -48,13 +53,11 @@ export class StorageService {
       return key;
     }
 
-    // Local fallback
+    // Local fallback — async I/O to avoid blocking the event loop
     const dir = path.join(this.localUploadDir, 'receipts', householdId);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+    await fs.promises.mkdir(dir, { recursive: true });
     const localPath = path.join(this.localUploadDir, key);
-    fs.writeFileSync(localPath, file);
+    await fs.promises.writeFile(localPath, file);
     return key;
   }
 
@@ -79,15 +82,18 @@ export class StorageService {
 
   async delete(key: string): Promise<void> {
     if (this.storage && this.bucketName) {
-      await this.storage.bucket(this.bucketName).file(key).delete();
+      await this.storage
+        .bucket(this.bucketName)
+        .file(key)
+        .delete({ ignoreNotFound: true });
       return;
     }
 
-    // Local fallback
+    // Local fallback — async I/O, best-effort
     const localPath = path.join(this.localUploadDir, key);
-    if (fs.existsSync(localPath)) {
-      fs.unlinkSync(localPath);
-    }
+    await fs.promises.unlink(localPath).catch(() => {
+      // File may already be gone — ignore
+    });
   }
 
   private extensionFromMime(mimeType: string): string {

@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   ForbiddenException,
   NotFoundException,
   BadRequestException,
@@ -16,6 +17,8 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 @Injectable()
 export class ReceiptsService {
+  private readonly logger = new Logger(ReceiptsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly storageService: StorageService,
@@ -87,14 +90,19 @@ export class ReceiptsService {
     } = query;
     const skip = (page - 1) * limit;
 
+    // For endDate, set to end-of-day so receipts on that date are included
+    const endOfDay = endDate
+      ? new Date(new Date(endDate).getTime() + 24 * 60 * 60 * 1000 - 1)
+      : undefined;
+
     const where = {
       householdId: user.householdId!,
       ...(status && { status }),
-      ...(startDate || endDate
+      ...(startDate || endOfDay
         ? {
             purchaseDate: {
               ...(startDate && { gte: new Date(startDate) }),
-              ...(endDate && { lte: new Date(endDate) }),
+              ...(endOfDay && { lte: endOfDay }),
             },
           }
         : {}),
@@ -215,9 +223,17 @@ export class ReceiptsService {
       throw new NotFoundException('Receipt not found');
     }
 
-    // Delete file from storage and receipt from DB
-    await this.storageService.delete(receipt.imageUrl);
+    // Delete DB record first so admin cleanup is not blocked by storage errors
     await this.prisma.receipt.delete({ where: { id: receiptId } });
+
+    // Best-effort storage cleanup
+    try {
+      await this.storageService.delete(receipt.imageUrl);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to delete storage object for receipt ${receiptId}: ${error}`,
+      );
+    }
   }
 
   private ensureHousehold(user: AuthUser) {
