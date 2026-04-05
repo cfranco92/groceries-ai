@@ -9,6 +9,8 @@ import { HouseholdsModule } from './modules/households/households.module';
 import { ListsModule } from './modules/lists/lists.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { ProductsModule } from './modules/products/products.module';
+import { StorageModule } from './modules/storage/storage.module';
+import { ReceiptsModule } from './modules/receipts/receipts.module';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { ProductsModule } from './modules/products/products.module';
     ListsModule,
     CategoriesModule,
     ProductsModule,
+    StorageModule,
+    ReceiptsModule,
   ],
 })
 export class AppModule {}

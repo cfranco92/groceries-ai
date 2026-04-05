@@ -31,6 +31,14 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   CORS_ORIGIN?: string;
+
+  @IsString()
+  @IsOptional()
+  GCS_BUCKET_NAME?: string;
+
+  @IsString()
+  @IsOptional()
+  GCP_PROJECT_ID?: string;
 }
 
 export function validate(config: Record<string, unknown>) {

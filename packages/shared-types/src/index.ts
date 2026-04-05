@@ -133,27 +133,46 @@ export interface Category {
 
 export interface Receipt {
   id: string;
-  imageUrl: string;
-  storeName: string | null;
-  totalAmount: number | null;
-  purchaseDate: string | null;
-  status: ReceiptStatus;
-  ocrRawData: Record<string, unknown> | null;
   householdId: string;
-  uploadedById: string;
+  userId: string;
+  imageUrl: string;
+  merchantName: string | null;
+  purchaseDate: string | null;
+  subtotal: number | null;
+  tax: number | null;
+  total: number | null;
+  status: ReceiptStatus;
+  processedAt: string | null;
+  rawOcrData: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface ReceiptItem {
   id: string;
-  name: string;
-  quantity: number;
-  unitPrice: number | null;
-  totalPrice: number | null;
   receiptId: string;
   productId: string | null;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
   createdAt: string;
+}
+
+// ─── Receipt DTOs ───────────────────────────────────────
+
+export interface UploadReceiptInput {
+  purchaseDate?: string;
+  merchantName?: string;
+}
+
+export interface QueryReceiptsInput {
+  status?: ReceiptStatus;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+  sortOrder?: 'asc' | 'desc';
 }
 
 // ─── API Response Types ──────────────────────────────────
