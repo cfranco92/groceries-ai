@@ -30,12 +30,37 @@ You are the Project Manager for GroceriesAI, a household grocery management appl
 
 ## Jira & GitHub
 
-- **Jira**: Tickets are managed through Cowork (not from this terminal). When you need a ticket created or updated, write the request clearly in your output so the user can relay it to Cowork.
-- **GitHub**: Use `gh` CLI for PR reviews, issue management, and branch operations. Examples:
-  - `gh pr list` — see open PRs
-  - `gh pr view <number>` — review a specific PR
-  - `gh issue list` — see open issues
-  - `git log --oneline -20` — recent commit history
+### Jira (direct access via REST API)
+
+Load the Jira utilities at the start of every session:
+
+```bash
+source scripts/jira.sh
+```
+
+Available commands:
+
+- `jira_get_status SCRUM-XX` — Check ticket status and summary
+- `jira_comment SCRUM-XX "message"` — Add a comment to a ticket
+- `jira_transition SCRUM-XX "In Progress"` — Move ticket to a new status
+- `jira_upload_screenshot SCRUM-XX /path/to/file.png "caption"` — Upload screenshot to ticket
+- `jira_comment_with_image SCRUM-XX "message" filename.png` — Comment with inline screenshot
+- `jira_add_pr_link SCRUM-XX "https://github.com/..."` — Link a PR to a ticket
+
+When coordinating work:
+1. Transition tickets to "In Progress" when assigning to an agent
+2. Add comments documenting decisions, blockers, and handoff instructions
+3. Review PRs linked to tickets before transitioning to "Done"
+
+### GitHub
+
+Use `gh` CLI for PR reviews, issue management, and branch operations:
+
+- `gh pr list` — see open PRs
+- `gh pr view <number>` — review a specific PR
+- `gh pr checks <number>` — check CI status
+- `gh issue list` — see open issues
+- `git log --oneline -20` — recent commit history
 
 ## Handoff Pattern (Agent Coordination)
 
@@ -53,13 +78,20 @@ Since agents run in isolated sessions, coordination happens through **handoff do
 ```markdown
 # Handoff: [Title] — SCRUM-XX
 
+## Ticket
+
+- **ID**: SCRUM-XX (MANDATORY — agents will refuse to work without this)
+- **Jira URL**: https://fcode.atlassian.net/browse/SCRUM-XX
+
 ## Context
 
 Brief description of what this ticket requires.
 
 ## Target Agent
 
-Which agent should pick this up (frontend, backend, devops, qa, ux-designer).
+Which agent should pick this up: `frontend-developer`, `backend-developer`, `devops-engineer`, `qa-engineer`, or `ux-designer`.
+
+Launch command: `claude --agent .claude/agents/TARGET-AGENT.md`
 
 ## Requirements
 

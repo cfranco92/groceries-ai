@@ -39,16 +39,73 @@ You are an expert React/Next.js frontend developer for GroceriesAI.
 
 - After implementing a feature, create `docs/handoffs/test-ready-SCRUM-XX.md` describing what was built and what needs testing
 
-## Git Workflow
+## Mandatory Ticket Workflow
 
-**One branch per ticket, one commit per ticket.** Never batch multiple tickets into a single commit.
+**RULE: Never start work without a Jira ticket ID.** Every task must be linked to a SCRUM-XX ticket. If no ticket ID is provided, ask for one before proceeding.
 
-1. Before starting a ticket: `git checkout -b feature/scrum-XX-short-description`
-2. Implement the ticket fully
-3. Commit with: `feat(web): SCRUM-XX — description`
-4. Create PR: `gh pr create --title "feat(web): SCRUM-XX — description" --body "..."`
+### Setup (run once per session)
 
-Branch naming: `feature/scrum-XX-short-description`, `fix/scrum-XX-short-description`
+```bash
+source scripts/jira.sh
+```
+
+### 1. Start ticket
+
+```bash
+jira_start_work SCRUM-XX
+# → Transitions ticket to "In Progress"
+# → Creates branch: feature/SCRUM-XX-short-description
+# → Adds comment on Jira with branch name
+```
+
+### 2. Work + document progress
+
+**MANDATORY: You MUST add progress comments to Jira as you complete each significant step. Do not wait until the end.** After each major milestone (component built, hook wired, page route created, tests passing), immediately call `jira_comment` to record what was done. Failing to document progress in real time is a workflow violation.
+
+```bash
+# Add progress comments to Jira as you work — after EVERY significant step
+jira_comment SCRUM-XX "Created ProductList component with TanStack Query integration and pagination."
+jira_comment SCRUM-XX "Added Zustand store for product filters (category, search term)."
+jira_comment SCRUM-XX "Page route /products created with loading skeleton and error boundary."
+jira_comment SCRUM-XX "Unit tests passing: 8/8 for ProductList component."
+
+# MANDATORY: Take screenshots of key UI states using Playwright and upload to Jira.
+# You MUST screenshot at minimum: empty state, loaded state, error state, and mobile responsive view.
+# Save screenshot to a temp file first, then upload.
+jira_upload_screenshot SCRUM-XX /tmp/empty-state.png "ProductList empty state"
+jira_comment_with_image SCRUM-XX "Empty state implementation" empty-state.png
+
+jira_upload_screenshot SCRUM-XX /tmp/loaded-state.png "ProductList with data"
+jira_comment_with_image SCRUM-XX "Loaded state with product cards" loaded-state.png
+
+jira_upload_screenshot SCRUM-XX /tmp/error-state.png "ProductList error state"
+jira_comment_with_image SCRUM-XX "Error state with retry button" error-state.png
+
+jira_upload_screenshot SCRUM-XX /tmp/mobile-view.png "ProductList mobile responsive"
+jira_comment_with_image SCRUM-XX "Mobile responsive layout (375px)" mobile-view.png
+
+# At the end of your work, add a summary comment listing everything that was done
+jira_comment SCRUM-XX "SUMMARY: Built ProductList page with components (ProductCard, ProductFilters, ProductList). Added Zustand store for filters. TanStack Query for data fetching. 8 unit tests passing. Screenshots of all key states uploaded. Ready for QA."
+```
+
+### 3. Finish ticket
+
+```bash
+# Stage and commit (conventional commits)
+git add -A
+git commit -m "feat(web): SCRUM-XX - description"
+
+# Creates PR + links PR to Jira + transitions to "In Review"
+jira_finish_work SCRUM-XX "Short PR title"
+```
+
+### 4. Handoff to QA
+
+Create `docs/handoffs/test-ready-SCRUM-XX.md` describing what was built and what needs testing. Include the PR link and any screenshots taken.
+
+### Branch naming
+
+`feature/SCRUM-XX-short-description`, `fix/SCRUM-XX-short-description`
 
 ## Architecture Rules
 
