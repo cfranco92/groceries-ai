@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Param,
   Query,
@@ -25,6 +26,7 @@ import { AuthUser } from '../auth/auth.types';
 import { ReceiptsService } from './receipts.service';
 import { UploadReceiptDto } from './dto/upload-receipt.dto';
 import { QueryReceiptsDto } from './dto/query-receipts.dto';
+import { UpdateReceiptItemDto } from './dto/update-receipt-item.dto';
 
 @ApiTags('Receipts')
 @ApiBearerAuth()
@@ -33,9 +35,9 @@ export class ReceiptsController {
   constructor(private readonly receiptsService: ReceiptsService) {}
 
   @Post()
-  @HttpCode(HttpStatus.ACCEPTED)
+  @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
-  @ApiOperation({ summary: 'Upload a receipt image for processing' })
+  @ApiOperation({ summary: 'Upload and process a receipt image' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -59,7 +61,7 @@ export class ReceiptsController {
       required: ['file'],
     },
   })
-  @ApiResponse({ status: 202, description: 'Receipt uploaded and pending processing' })
+  @ApiResponse({ status: 200, description: 'Receipt uploaded and processed' })
   @ApiResponse({ status: 400, description: 'Invalid file type or size' })
   async upload(
     @CurrentUser() user: AuthUser,
@@ -88,6 +90,25 @@ export class ReceiptsController {
     @Param('id') id: string,
   ) {
     const data = await this.receiptsService.findOne(user, id);
+    return { data };
+  }
+
+  @Patch(':receiptId/items/:itemId')
+  @ApiOperation({ summary: 'Correct OCR errors on a receipt item' })
+  @ApiResponse({ status: 200, description: 'Updated receipt item' })
+  @ApiResponse({ status: 404, description: 'Receipt or item not found' })
+  async updateItem(
+    @CurrentUser() user: AuthUser,
+    @Param('receiptId') receiptId: string,
+    @Param('itemId') itemId: string,
+    @Body() dto: UpdateReceiptItemDto,
+  ) {
+    const data = await this.receiptsService.updateItem(
+      user,
+      receiptId,
+      itemId,
+      dto,
+    );
     return { data };
   }
 
