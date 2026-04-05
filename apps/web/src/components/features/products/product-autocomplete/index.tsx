@@ -32,7 +32,6 @@ export function ProductAutocomplete({
   const [activeIndex, setActiveIndex] = useState(-1);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
 
   const { data: categories } = useCategories();
   const categoryMap = new Map(categories?.map((c) => [c.id, c]) ?? []);
@@ -150,7 +149,6 @@ export function ProductAutocomplete({
 
       {isOpen && (
         <div
-          ref={listRef}
           id="product-suggestions"
           role="listbox"
           className="absolute z-50 mt-1 w-full rounded-md border bg-background shadow-lg"

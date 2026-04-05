@@ -84,6 +84,13 @@ export default function ProductDetailPage() {
     const latest = history[0]!;
     const previous = history[1]!;
     const diff = latest.price - previous.price;
+    const epsilon = 0.000001;
+
+    if (Math.abs(previous.price) < epsilon) {
+      if (Math.abs(diff) < epsilon) return 'stable';
+      return diff > 0 ? 'up' : 'down';
+    }
+
     const pctChange = Math.abs(diff / previous.price) * 100;
     if (pctChange < 5) return 'stable';
     return diff > 0 ? 'up' : 'down';

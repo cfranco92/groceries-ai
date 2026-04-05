@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Camera, Upload, FileImage, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -36,6 +36,13 @@ export function FileUpload({
 
   const displayError = error ?? localError;
 
+  // Revoke blob URL on unmount to prevent memory leak
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
   const validateFile = useCallback(
     (file: File): boolean => {
       setLocalError(null);
@@ -56,6 +63,8 @@ export function FileUpload({
   const handleFile = useCallback(
     (file: File) => {
       if (!validateFile(file)) return;
+      // Revoke previous blob URL to prevent memory leak
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
       if (file.type.startsWith('image/')) {
         const url = URL.createObjectURL(file);
         setPreviewUrl(url);
@@ -64,7 +73,7 @@ export function FileUpload({
       }
       onFileSelect(file);
     },
-    [validateFile, onFileSelect],
+    [validateFile, onFileSelect, previewUrl],
   );
 
   const handleDrop = useCallback(

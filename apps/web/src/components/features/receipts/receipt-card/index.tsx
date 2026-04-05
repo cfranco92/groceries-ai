@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { PriceDisplay } from '@/components/ui/price-display';
 import type { Receipt } from '@groceries-ai/shared-types';
+import { cn } from '@/lib/utils';
 
 interface ReceiptCardProps {
   receipt: Receipt & { itemCount?: number };
@@ -75,6 +76,3 @@ export function ReceiptCard({ receipt }: ReceiptCardProps) {
     </Link>
   );
 }
-
-// Re-export cn for the onError fallback
-import { cn } from '@/lib/utils';

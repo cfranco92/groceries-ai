@@ -56,7 +56,7 @@ SCRUM-27 implements the Phase 2 frontend: Product Catalog and Receipt Upload UI.
 
 ## Enhanced Existing Pages
 
-- **List Detail (`/lists/[id]`)**: Quick-add input replaced with `ProductAutocomplete` — typing 2+ characters shows matching products from catalog; selecting pre-fills name/unit with productId link; free-text entry still works
+- **List Detail (`/lists/[id]`)**: Quick-add input replaced with `ProductAutocomplete` — typing 2+ characters shows matching products from catalog; selecting pre-fills name/unit (productId linking not yet wired — requires API/hook extension); free-text entry still works
 
 ## Dependencies Added
 
@@ -97,3 +97,4 @@ All hooks use `USE_MOCK = true` with realistic sample data. To switch to real AP
 - "Create new product" in correction modal is a placeholder button (no inline creation flow yet)
 - "Retry Processing" on failed receipts is a placeholder button
 - Product purchase history is hardcoded for all products (same 4 entries)
+- Product autocomplete in list detail pre-fills name/unit but does not persist `productId` (API hook doesn't accept it yet)
