@@ -43,6 +43,10 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   GOOGLE_DOCUMENT_AI_PROCESSOR_ID?: string;
+
+  @IsString()
+  @IsOptional()
+  GOOGLE_DOCUMENT_AI_LOCATION?: string;
 }
 
 export function validate(config: Record<string, unknown>) {

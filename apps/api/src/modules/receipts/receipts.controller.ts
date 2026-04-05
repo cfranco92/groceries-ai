@@ -35,9 +35,9 @@ export class ReceiptsController {
   constructor(private readonly receiptsService: ReceiptsService) {}
 
   @Post()
-  @HttpCode(HttpStatus.ACCEPTED)
+  @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
-  @ApiOperation({ summary: 'Upload a receipt image for processing' })
+  @ApiOperation({ summary: 'Upload and process a receipt image' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -61,7 +61,7 @@ export class ReceiptsController {
       required: ['file'],
     },
   })
-  @ApiResponse({ status: 202, description: 'Receipt uploaded and processed' })
+  @ApiResponse({ status: 200, description: 'Receipt uploaded and processed' })
   @ApiResponse({ status: 400, description: 'Invalid file type or size' })
   async upload(
     @CurrentUser() user: AuthUser,

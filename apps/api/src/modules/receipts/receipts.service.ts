@@ -5,8 +5,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
-import { Prisma } from '@prisma/client';
+import { UserRole, Prisma, PrismaClient } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
@@ -16,6 +15,11 @@ import { AuthUser } from '../auth/auth.types';
 import { UploadReceiptDto } from './dto/upload-receipt.dto';
 import { QueryReceiptsDto } from './dto/query-receipts.dto';
 import { UpdateReceiptItemDto } from './dto/update-receipt-item.dto';
+
+type TxClient = Omit<
+  PrismaClient,
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+>;
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -87,7 +91,7 @@ export class ReceiptsService {
       status: processed.status,
       merchantName: processed.merchantName,
       purchaseDate: processed.purchaseDate,
-      total: processed.total,
+      total: processed.total ? Number(processed.total) : null,
       imageUrl: signedUrl,
     };
   }
@@ -112,33 +116,39 @@ export class ReceiptsService {
         mimeType,
       );
 
-      // Create receipt items and match/create products
-      const productIds = await this.createReceiptItems(
-        receiptId,
-        householdId,
-        parsed,
-      );
-
       // Use user-provided values if present, fallback to OCR values
       const merchantName = userMerchantName || parsed.merchantName;
       const purchaseDate = userPurchaseDate || parsed.purchaseDate;
 
-      // Update receipt with OCR results
-      const updated = await this.prisma.receipt.update({
-        where: { id: receiptId },
-        data: {
-          status: 'COMPLETED',
-          merchantName,
-          purchaseDate,
-          subtotal: parsed.subtotal,
-          tax: parsed.tax,
-          total: parsed.total,
-          rawOcrData: parsed.rawResponse as Prisma.InputJsonValue,
-          processedAt: new Date(),
-        },
-      });
+      // Run item creation and receipt update in a transaction
+      const { updated, productIds } = await this.prisma.$transaction(
+        async (tx) => {
+          const ids = await this.createReceiptItems(
+            tx,
+            receiptId,
+            householdId,
+            parsed,
+          );
 
-      // Update product stats for all matched products
+          const receipt = await tx.receipt.update({
+            where: { id: receiptId },
+            data: {
+              status: 'COMPLETED',
+              merchantName,
+              purchaseDate,
+              subtotal: parsed.subtotal,
+              tax: parsed.tax,
+              total: parsed.total,
+              rawOcrData: parsed.rawResponse as Prisma.InputJsonValue,
+              processedAt: new Date(),
+            },
+          });
+
+          return { updated: receipt, productIds: ids };
+        },
+      );
+
+      // Update product stats outside the transaction (non-critical)
       await this.updateProductStats(productIds);
 
       return updated;
@@ -154,6 +164,7 @@ export class ReceiptsService {
   }
 
   private async createReceiptItems(
+    tx: TxClient,
     receiptId: string,
     householdId: string,
     parsed: ParsedReceiptData,
@@ -172,11 +183,11 @@ export class ReceiptsService {
       // Create new product if no match found
       if (!product) {
         // Find the "Other" category
-        const otherCategory = await this.prisma.category.findFirst({
+        const otherCategory = await tx.category.findFirst({
           where: { name: { equals: 'Other', mode: 'insensitive' } },
         });
 
-        product = await this.prisma.product.create({
+        product = await tx.product.create({
           data: {
             householdId,
             name: item.name,
@@ -186,7 +197,7 @@ export class ReceiptsService {
         });
       }
 
-      await this.prisma.receiptItem.create({
+      await tx.receiptItem.create({
         data: {
           receiptId,
           productId: product.id,
@@ -311,24 +322,63 @@ export class ReceiptsService {
 
     const oldProductId = item.productId;
 
-    const updated = await this.prisma.receiptItem.update({
-      where: { id: itemId },
-      data: {
-        ...(dto.name !== undefined && { name: dto.name }),
-        ...(dto.quantity !== undefined && { quantity: dto.quantity }),
-        ...(dto.unitPrice !== undefined && { unitPrice: dto.unitPrice }),
-        ...(dto.totalPrice !== undefined && { totalPrice: dto.totalPrice }),
-        ...(dto.productId !== undefined && { productId: dto.productId }),
-      },
-      include: {
-        product: { select: { id: true, name: true } },
-      },
+    // Update item and recalculate receipt totals in a transaction
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const updatedItem = await tx.receiptItem.update({
+        where: { id: itemId },
+        data: {
+          ...(dto.name !== undefined && { name: dto.name }),
+          ...(dto.quantity !== undefined && { quantity: dto.quantity }),
+          ...(dto.unitPrice !== undefined && { unitPrice: dto.unitPrice }),
+          ...(dto.totalPrice !== undefined && { totalPrice: dto.totalPrice }),
+          ...(dto.productId !== undefined && { productId: dto.productId }),
+        },
+        include: {
+          product: { select: { id: true, name: true } },
+        },
+      });
+
+      // Recalculate receipt subtotal/total if price fields changed
+      if (
+        dto.quantity !== undefined ||
+        dto.unitPrice !== undefined ||
+        dto.totalPrice !== undefined
+      ) {
+        const { _sum } = await tx.receiptItem.aggregate({
+          where: { receiptId },
+          _sum: { totalPrice: true },
+        });
+
+        const subtotal = _sum.totalPrice ?? new Decimal(0);
+        const tax = receipt.tax ?? new Decimal(0);
+        const total = subtotal.add(tax);
+
+        await tx.receipt.update({
+          where: { id: receiptId },
+          data: { subtotal, total },
+        });
+      }
+
+      return updatedItem;
     });
 
-    // Recalculate product stats if productId changed
-    if (dto.productId !== undefined && dto.productId !== oldProductId) {
-      const productIdsToUpdate = [dto.productId];
+    // Determine which products need stats recalculation
+    const productIdsToUpdate: string[] = [];
+    const priceFieldsChanged =
+      dto.quantity !== undefined ||
+      dto.unitPrice !== undefined ||
+      dto.totalPrice !== undefined;
+    const productIdChanged =
+      dto.productId !== undefined && dto.productId !== oldProductId;
+
+    if (productIdChanged) {
+      productIdsToUpdate.push(dto.productId!);
       if (oldProductId) productIdsToUpdate.push(oldProductId);
+    } else if (priceFieldsChanged && (dto.productId ?? oldProductId)) {
+      productIdsToUpdate.push((dto.productId ?? oldProductId)!);
+    }
+
+    if (productIdsToUpdate.length > 0) {
       await this.updateProductStats(productIdsToUpdate);
     }
 

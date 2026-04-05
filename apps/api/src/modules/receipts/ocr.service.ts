@@ -27,23 +27,35 @@ export class OcrService {
   private readonly logger = new Logger(OcrService.name);
   private readonly client: DocumentProcessorServiceClient | null;
   private readonly processorName: string | null;
+  private readonly isMockAllowed: boolean;
 
   constructor(private readonly config: ConfigService) {
     const projectId = this.config.get<string>('GCP_PROJECT_ID');
     const processorId = this.config.get<string>(
       'GOOGLE_DOCUMENT_AI_PROCESSOR_ID',
     );
+    const processorLocation =
+      this.config.get<string>('GOOGLE_DOCUMENT_AI_LOCATION') ?? 'us';
+    const nodeEnv = this.config.get<string>('NODE_ENV') ?? 'development';
+
+    this.isMockAllowed = ['development', 'test'].includes(nodeEnv);
 
     if (projectId && processorId) {
       this.client = new DocumentProcessorServiceClient();
-      this.processorName = `projects/${projectId}/locations/us/processors/${processorId}`;
+      this.processorName = `projects/${projectId}/locations/${processorLocation}/processors/${processorId}`;
       this.logger.log('OcrService initialized with Google Document AI');
     } else {
       this.client = null;
       this.processorName = null;
-      this.logger.warn(
-        'Document AI env vars not set — using mock OCR processor',
-      );
+      if (this.isMockAllowed) {
+        this.logger.warn(
+          'Document AI env vars not set — using mock OCR processor (dev/test only)',
+        );
+      } else {
+        this.logger.error(
+          'Document AI env vars not set — OCR processing will fail in this environment',
+        );
+      }
     }
   }
 
@@ -52,6 +64,11 @@ export class OcrService {
     mimeType: string,
   ): Promise<ParsedReceiptData> {
     if (!this.client || !this.processorName) {
+      if (!this.isMockAllowed) {
+        throw new Error(
+          'Document AI is not configured and mock processor is disabled outside dev/test',
+        );
+      }
       return this.mockProcessReceipt();
     }
 
@@ -165,10 +182,61 @@ export class OcrService {
     return { name, quantity, unitPrice, totalPrice };
   }
 
-  private parseAmount(text: string): number | null {
-    const cleaned = text.replace(/[^0-9.,-]/g, '').replace(',', '.');
-    const value = parseFloat(cleaned);
-    return isNaN(value) ? null : value;
+  /**
+   * Parse a currency/number string, handling international formats:
+   * - "1,234.56" (English) → 1234.56
+   * - "1.234,56" (European) → 1234.56
+   * - "$3.50", "€1.234,56" → stripped and parsed
+   */
+  parseAmount(text: string): number | null {
+    const cleaned = text.replace(/[^0-9.,-]/g, '').trim();
+    if (!cleaned) return null;
+
+    const isNegative = cleaned.includes('-');
+    let normalized = cleaned.replace(/-/g, '');
+
+    const lastComma = normalized.lastIndexOf(',');
+    const lastDot = normalized.lastIndexOf('.');
+
+    if (lastComma !== -1 && lastDot !== -1) {
+      // Both separators present — the later one is decimal
+      const decimalSep = lastComma > lastDot ? ',' : '.';
+      const thousandsSep = decimalSep === ',' ? '.' : ',';
+      normalized = normalized.split(thousandsSep).join('');
+      if (decimalSep === ',') {
+        normalized = normalized.replace(',', '.');
+      }
+    } else if (lastComma !== -1) {
+      const commaCount = (normalized.match(/,/g) ?? []).length;
+      if (commaCount > 1) {
+        // Multiple commas — all are thousands separators
+        normalized = normalized.replace(/,/g, '');
+      } else {
+        // Single comma — check digits after it
+        const decimalDigits = normalized.length - lastComma - 1;
+        normalized =
+          decimalDigits === 3
+            ? normalized.replace(',', '') // "1,234" → thousands
+            : normalized.replace(',', '.'); // "3,50" → decimal
+      }
+    } else if (lastDot !== -1) {
+      const dotCount = (normalized.match(/\./g) ?? []).length;
+      if (dotCount > 1) {
+        // Multiple dots — all are thousands separators
+        normalized = normalized.replace(/\./g, '');
+      } else {
+        // Single dot with exactly 3 trailing digits — ambiguous but treat as decimal
+        // (most receipt amounts have 2 decimal digits, so 3 means thousands only for large values)
+        // Keep dot as decimal separator (standard behavior)
+      }
+    }
+
+    if (isNegative) {
+      normalized = `-${normalized}`;
+    }
+
+    const value = Number(normalized);
+    return Number.isNaN(value) ? null : value;
   }
 
   private mockProcessReceipt(): ParsedReceiptData {

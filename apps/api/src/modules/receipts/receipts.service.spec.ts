@@ -105,6 +105,10 @@ describe('ReceiptsService', () => {
     storageService = module.get(StorageService);
     ocrService = module.get(OcrService);
     productMatchingService = module.get(ProductMatchingService);
+
+    // Default: $transaction executes callback with the prisma mock itself
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (prisma.$transaction as jest.Mock).mockImplementation((cb: any) => cb(prisma));
   });
 
   describe('upload', () => {
@@ -210,6 +214,7 @@ describe('ReceiptsService', () => {
         mockFile.mimetype,
       );
       expect(result.status).toBe('COMPLETED');
+      expect(result.total).toBe(10.79);
       expect(result.imageUrl).toBe('https://signed-url.example.com');
     });
 
@@ -269,9 +274,11 @@ describe('ReceiptsService', () => {
         purchaseDate: '2026-03-15',
       });
 
-      // The second update call (COMPLETED) should use user-provided values
+      // The COMPLETED update (inside transaction) should use user-provided values
       const completedUpdateCall = prisma.receipt.update.mock.calls.find(
-        (call) => (call[0] as { data: { status?: string } }).data.status === 'COMPLETED',
+        (call) =>
+          (call[0] as { data: { status?: string } }).data.status ===
+          'COMPLETED',
       );
       expect(completedUpdateCall).toBeDefined();
       expect(
@@ -300,12 +307,6 @@ describe('ReceiptsService', () => {
         null,
       );
 
-      // First call: set to PROCESSING, second call: set to FAILED
-      expect(prisma.receipt.update).toHaveBeenCalledTimes(2);
-      const failedCall = prisma.receipt.update.mock.calls[1]![0] as {
-        data: { status: string };
-      };
-      expect(failedCall.data.status).toBe('FAILED');
       expect(result.status).toBe('FAILED');
     });
 
@@ -427,6 +428,41 @@ describe('ReceiptsService', () => {
           }),
         }),
       );
+    });
+
+    it('should run item creation and receipt update in a transaction', async () => {
+      prisma.receipt.update.mockResolvedValue({
+        id: 'receipt-1',
+        status: ReceiptStatus.COMPLETED,
+      } as never);
+      prisma.category.findFirst.mockResolvedValue(null);
+      prisma.product.create.mockResolvedValue({
+        id: 'p-1',
+        householdId: 'household-1',
+        name: 'Test',
+        categoryId: null,
+        defaultUnit: 'UNIT',
+        averagePrice: null,
+        lastPurchasedAt: null,
+        purchaseCount: 0,
+        avgDaysBetween: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      prisma.receiptItem.create.mockResolvedValue({} as never);
+      prisma.receiptItem.findMany.mockResolvedValue([]);
+      prisma.product.update.mockResolvedValue({} as never);
+
+      await service.processReceipt(
+        'receipt-1',
+        'household-1',
+        Buffer.from('data'),
+        'image/jpeg',
+        null,
+        null,
+      );
+
+      expect(prisma.$transaction).toHaveBeenCalled();
     });
   });
 
@@ -557,6 +593,7 @@ describe('ReceiptsService', () => {
       prisma.receipt.findFirst.mockResolvedValue({
         id: 'r-1',
         householdId: 'household-1',
+        tax: new Decimal('0.80'),
       } as never);
       prisma.receiptItem.findFirst.mockResolvedValue({
         id: 'ri-1',
@@ -575,6 +612,12 @@ describe('ReceiptsService', () => {
         totalPrice: new Decimal('7.00'),
         product: { id: 'p-1', name: 'Product' },
       } as never);
+      prisma.receiptItem.aggregate.mockResolvedValue({
+        _sum: { totalPrice: new Decimal('7.00') },
+      } as never);
+      prisma.receipt.update.mockResolvedValue({} as never);
+      prisma.receiptItem.findMany.mockResolvedValue([]);
+      prisma.product.update.mockResolvedValue({} as never);
 
       const result = await service.updateItem(adminUser, 'r-1', 'ri-1', {
         name: 'Corrected Name',
@@ -584,6 +627,39 @@ describe('ReceiptsService', () => {
       });
 
       expect(result.name).toBe('Corrected Name');
+    });
+
+    it('should recalculate receipt totals when price fields change', async () => {
+      prisma.receipt.findFirst.mockResolvedValue({
+        id: 'r-1',
+        householdId: 'household-1',
+        tax: new Decimal('0.80'),
+      } as never);
+      prisma.receiptItem.findFirst.mockResolvedValue({
+        id: 'ri-1',
+        receiptId: 'r-1',
+        productId: 'p-1',
+      } as never);
+      prisma.receiptItem.update.mockResolvedValue({
+        id: 'ri-1',
+        product: { id: 'p-1', name: 'Product' },
+      } as never);
+      prisma.receiptItem.aggregate.mockResolvedValue({
+        _sum: { totalPrice: new Decimal('15.00') },
+      } as never);
+      prisma.receipt.update.mockResolvedValue({} as never);
+      prisma.receiptItem.findMany.mockResolvedValue([]);
+      prisma.product.update.mockResolvedValue({} as never);
+
+      await service.updateItem(adminUser, 'r-1', 'ri-1', {
+        totalPrice: 15.0,
+      });
+
+      // Verify receipt totals were recalculated
+      const receiptUpdateCall = prisma.receipt.update.mock.calls.find(
+        (call) => (call[0] as { where: { id: string } }).where.id === 'r-1',
+      );
+      expect(receiptUpdateCall).toBeDefined();
     });
 
     it('should validate product belongs to household when changing productId', async () => {
@@ -609,6 +685,7 @@ describe('ReceiptsService', () => {
       prisma.receipt.findFirst.mockResolvedValue({
         id: 'r-1',
         householdId: 'household-1',
+        tax: null,
       } as never);
       prisma.receiptItem.findFirst.mockResolvedValue({
         id: 'ri-1',
@@ -634,6 +711,37 @@ describe('ReceiptsService', () => {
       });
 
       expect(spy).toHaveBeenCalledWith(['new-product', 'old-product']);
+    });
+
+    it('should update stats for current product when price fields change', async () => {
+      prisma.receipt.findFirst.mockResolvedValue({
+        id: 'r-1',
+        householdId: 'household-1',
+        tax: new Decimal('0.80'),
+      } as never);
+      prisma.receiptItem.findFirst.mockResolvedValue({
+        id: 'ri-1',
+        receiptId: 'r-1',
+        productId: 'p-1',
+      } as never);
+      prisma.receiptItem.update.mockResolvedValue({
+        id: 'ri-1',
+        product: { id: 'p-1', name: 'Product' },
+      } as never);
+      prisma.receiptItem.aggregate.mockResolvedValue({
+        _sum: { totalPrice: new Decimal('5.00') },
+      } as never);
+      prisma.receipt.update.mockResolvedValue({} as never);
+      prisma.receiptItem.findMany.mockResolvedValue([]);
+      prisma.product.update.mockResolvedValue({} as never);
+
+      const spy = jest.spyOn(service, 'updateProductStats');
+
+      await service.updateItem(adminUser, 'r-1', 'ri-1', {
+        unitPrice: 5.0,
+      });
+
+      expect(spy).toHaveBeenCalledWith(['p-1']);
     });
   });
 

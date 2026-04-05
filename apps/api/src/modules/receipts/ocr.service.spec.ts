@@ -10,7 +10,7 @@ jest.mock('@google-cloud/documentai', () => ({
 }));
 
 describe('OcrService', () => {
-  describe('mock mode (no env vars)', () => {
+  describe('mock mode (dev environment, no env vars)', () => {
     let service: OcrService;
 
     beforeEach(async () => {
@@ -20,7 +20,10 @@ describe('OcrService', () => {
           {
             provide: ConfigService,
             useValue: {
-              get: jest.fn().mockReturnValue(undefined),
+              get: jest.fn().mockImplementation((key: string) => {
+                if (key === 'NODE_ENV') return 'development';
+                return undefined;
+              }),
             },
           },
         ],
@@ -29,7 +32,7 @@ describe('OcrService', () => {
       service = module.get(OcrService);
     });
 
-    it('should return mock data when Document AI is not configured', async () => {
+    it('should return mock data when Document AI is not configured in dev', async () => {
       const result = await service.processReceipt(
         Buffer.from('fake-image'),
         'image/jpeg',
@@ -62,12 +65,42 @@ describe('OcrService', () => {
     });
   });
 
+  describe('mock mode disabled in production', () => {
+    let service: OcrService;
+
+    beforeEach(async () => {
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          OcrService,
+          {
+            provide: ConfigService,
+            useValue: {
+              get: jest.fn().mockImplementation((key: string) => {
+                if (key === 'NODE_ENV') return 'production';
+                return undefined;
+              }),
+            },
+          },
+        ],
+      }).compile();
+
+      service = module.get(OcrService);
+    });
+
+    it('should throw when Document AI not configured in production', async () => {
+      await expect(
+        service.processReceipt(Buffer.from('data'), 'image/jpeg'),
+      ).rejects.toThrow(
+        'Document AI is not configured and mock processor is disabled outside dev/test',
+      );
+    });
+  });
+
   describe('Document AI mode', () => {
     let service: OcrService;
     let mockProcessDocument: jest.Mock;
 
     beforeEach(async () => {
-      // Reset the mock
       const { DocumentProcessorServiceClient } = jest.requireMock(
         '@google-cloud/documentai',
       );
@@ -86,6 +119,8 @@ describe('OcrService', () => {
                 if (key === 'GCP_PROJECT_ID') return 'test-project';
                 if (key === 'GOOGLE_DOCUMENT_AI_PROCESSOR_ID')
                   return 'test-processor';
+                if (key === 'GOOGLE_DOCUMENT_AI_LOCATION') return 'eu';
+                if (key === 'NODE_ENV') return 'production';
                 return undefined;
               }),
             },
@@ -159,6 +194,20 @@ describe('OcrService', () => {
         totalPrice: 2.99,
       });
       expect(result.rawResponse).toBeDefined();
+    });
+
+    it('should use configured location in processor name', async () => {
+      mockProcessDocument.mockResolvedValue([
+        { document: { entities: [] } },
+      ]);
+
+      await service.processReceipt(Buffer.from('data'), 'image/jpeg');
+
+      expect(mockProcessDocument).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'projects/test-project/locations/eu/processors/test-processor',
+        }),
+      );
     });
 
     it('should infer unitPrice from totalPrice and quantity', async () => {
@@ -262,6 +311,66 @@ describe('OcrService', () => {
       );
 
       expect(result.purchaseDate).toEqual(new Date('2026-01-20'));
+    });
+  });
+
+  describe('parseAmount', () => {
+    let service: OcrService;
+
+    beforeEach(async () => {
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          OcrService,
+          {
+            provide: ConfigService,
+            useValue: {
+              get: jest.fn().mockImplementation((key: string) => {
+                if (key === 'NODE_ENV') return 'test';
+                return undefined;
+              }),
+            },
+          },
+        ],
+      }).compile();
+
+      service = module.get(OcrService);
+    });
+
+    it('should parse simple numbers', () => {
+      expect(service.parseAmount('3.50')).toBe(3.5);
+      expect(service.parseAmount('100')).toBe(100);
+    });
+
+    it('should strip currency symbols', () => {
+      expect(service.parseAmount('$3.50')).toBe(3.5);
+      expect(service.parseAmount('€49.14')).toBe(49.14);
+    });
+
+    it('should handle English format with thousands separator', () => {
+      expect(service.parseAmount('1,234.56')).toBe(1234.56);
+      expect(service.parseAmount('$1,234.56')).toBe(1234.56);
+    });
+
+    it('should handle European format with thousands separator', () => {
+      expect(service.parseAmount('1.234,56')).toBe(1234.56);
+    });
+
+    it('should handle comma as decimal separator', () => {
+      expect(service.parseAmount('3,50')).toBe(3.5);
+    });
+
+    it('should handle multiple thousands separators', () => {
+      expect(service.parseAmount('1,234,567')).toBe(1234567);
+      expect(service.parseAmount('1.234.567')).toBe(1234567);
+    });
+
+    it('should return null for empty or non-numeric text', () => {
+      expect(service.parseAmount('')).toBeNull();
+      expect(service.parseAmount('abc')).toBeNull();
+    });
+
+    it('should handle negative amounts', () => {
+      expect(service.parseAmount('-3.50')).toBe(-3.5);
     });
   });
 });
