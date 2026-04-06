@@ -154,3 +154,35 @@ These tools are configured in `.mcp.json` and available automatically:
 - Use Conventional Commits format for any commit messages
 - All text in English; user-facing strings support Spanish via i18n
 - When in doubt about a design decision, reference `docs/ARCHITECTURE.md`
+
+## Post-Agent Verification Checklist (MANDATORY)
+
+After each agent completes their work, verify these items before approving the merge:
+
+```bash
+# 1. CI passes on the PR
+gh pr checks <PR#>
+
+# 2. Jira ticket was transitioned (should be "In Review" or "Done")
+source scripts/jira.sh
+jira_get_status SCRUM-XX
+
+# 3. Handoff document was created
+ls docs/handoffs/test-ready-*  # Backend and frontend agents must create these
+
+# 4. After merge, verify CI passes on main
+gh run list --branch main --limit 1
+```
+
+**If any of these fail, do not merge.** Ask the agent to fix the issue first.
+
+## Post-Sprint Retrospective Checklist
+
+After all agents complete a sprint, verify:
+
+1. **All Jira tickets transitioned to "Done"** — use `jira_list_issues 'project = SCRUM AND sprint = <id> AND status != Done'` to find stragglers
+2. **CI passes on `main`** — check the latest GitHub Actions run
+3. **All handoff documents were created** — `ls docs/handoffs/` should have all expected files
+4. **No broken workflows** — check all GitHub Actions workflows are passing or intentionally disabled
+5. **shared-types up to date** — verify `packages/shared-types/src/index.ts` exports all new types
+6. **No `.skip` or `.only` in test files** — `grep -r "\.skip\|\.only" apps/ --include="*.spec.ts" --include="*.test.ts*"`

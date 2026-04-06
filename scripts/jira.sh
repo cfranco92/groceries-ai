@@ -532,13 +532,13 @@ jira_create_issue() {
       --arg parent "$parent_key" \
       --argjson labels "$labels_json" \
       '{
-        fields: {
+        fields: ({
           project: { key: $proj },
           issuetype: { name: $type },
           summary: $sum,
           parent: { key: $parent },
           labels: $labels
-        } + (if $desc != null then { description: $desc } else {} end)
+        } + (if $desc != null then { description: $desc } else {} end))
       }')
   else
     payload=$(jq -n \
@@ -548,12 +548,12 @@ jira_create_issue() {
       --argjson desc "$desc_adf" \
       --argjson labels "$labels_json" \
       '{
-        fields: {
+        fields: ({
           project: { key: $proj },
           issuetype: { name: $type },
           summary: $sum,
           labels: $labels
-        } + (if $desc != null then { description: $desc } else {} end)
+        } + (if $desc != null then { description: $desc } else {} end))
       }')
   fi
 

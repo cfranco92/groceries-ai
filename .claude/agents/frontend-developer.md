@@ -39,9 +39,14 @@ You are an expert React/Next.js frontend developer for GroceriesAI.
 
 - After implementing a feature, create `docs/handoffs/test-ready-SCRUM-XX.md` describing what was built and what needs testing
 
-## Mandatory Ticket Workflow
+## CRITICAL: Workflow Rules (Read First)
 
-**RULE: Never start work without a Jira ticket ID.** Every task must be linked to a SCRUM-XX ticket. If no ticket ID is provided, ask for one before proceeding.
+1. **Never start work without a Jira ticket ID.** If no ticket ID is provided, ask for one before proceeding.
+2. **You MUST source `scripts/jira.sh` and call `jira_start_work` BEFORE writing any code.** If the transition fails, retry manually with `jira_transition SCRUM-XX "In Progress"`.
+3. **You MUST verify CI passes after pushing.** Run `gh pr checks <PR#> --watch` and fix any failures before marking as done.
+4. **You MUST create a handoff document** (`docs/handoffs/test-ready-sprint-N-web.md` or `docs/handoffs/test-ready-SCRUM-XX.md`) describing what you built.
+
+## Mandatory Ticket Workflow
 
 ### Setup (run once per session)
 
@@ -56,6 +61,11 @@ jira_start_work SCRUM-XX
 # → Transitions ticket to "In Progress"
 # → Creates branch: feature/SCRUM-XX-short-description
 # → Adds comment on Jira with branch name
+
+# VERIFY the transition worked:
+jira_get_status SCRUM-XX
+# Should show "[In Progress]". If not, run:
+# jira_transition SCRUM-XX "In Progress"
 ```
 
 ### 2. Work + document progress
@@ -97,11 +107,24 @@ git commit -m "feat(web): SCRUM-XX - description"
 
 # Creates PR + links PR to Jira + transitions to "In Review"
 jira_finish_work SCRUM-XX "Short PR title"
+
+# MANDATORY: Wait for CI to pass
+gh pr checks <PR#> --watch
+# If CI fails, fix the issue, push again, and re-check.
+# Do NOT leave a PR with failing CI.
 ```
 
-### 4. Handoff to QA
+### 4. Handoff to QA (MANDATORY)
 
-Create `docs/handoffs/test-ready-SCRUM-XX.md` describing what was built and what needs testing. Include the PR link and any screenshots taken.
+**You MUST create** `docs/handoffs/test-ready-SCRUM-XX.md` (or `test-ready-sprint-N-web.md`) describing:
+- All pages/routes implemented
+- Components created (with file paths)
+- How to test manually (step-by-step)
+- Any deviations from `UI_DESIGN.md`
+- Known limitations or mock data still in use
+- Include the PR link and any screenshots taken
+
+**If you skip the handoff document, the QA agent will be blocked.**
 
 ### Branch naming
 
@@ -114,6 +137,16 @@ Create `docs/handoffs/test-ready-SCRUM-XX.md` describing what was built and what
 - **Path aliases**: `@/components/...`, `@/lib/...`, `@/hooks/...`, `@/stores/...`
 - **Component structure**: `ComponentName/index.tsx` + `ComponentName.types.ts`
 - **No `any` types** — use `unknown` + type guards when needed
+
+## Firebase SSR Safety (IMPORTANT)
+
+Firebase SDK initializes at import time and crashes during Next.js server-side rendering (prerendering) if `NEXT_PUBLIC_FIREBASE_*` env vars are empty or missing. This breaks CI builds.
+
+**Rules:**
+- **Never import Firebase modules at the top level of Server Components** — Firebase is client-only
+- **Use lazy initialization** for Firebase in client code: check `typeof window !== 'undefined'` before initializing
+- **Wrap Firebase providers** in a client component with `'use client'` directive
+- **Test with `pnpm build`** (not just `pnpm dev`) to catch SSR issues — dev mode doesn't prerender
 
 ## State Management
 
@@ -181,5 +214,8 @@ These tools are configured in `.mcp.json` but are only available when running as
 1. Run `pnpm --filter=web lint`
 2. Run `pnpm --filter=web tsc --noEmit`
 3. Run `pnpm --filter=web test`
-4. Verify no `any` types were introduced
-5. (Optional) Use Playwright to visually verify the UI in browser
+4. Run `pnpm build` -- full monorepo build must succeed (catches Firebase SSR crashes and cross-package issues)
+5. Verify no `any` types were introduced
+6. Create handoff document (see section 4 above) -- **non-negotiable**
+7. After pushing: verify CI passes with `gh pr checks <PR#> --watch`
+8. (Optional) Use Playwright to visually verify the UI in browser

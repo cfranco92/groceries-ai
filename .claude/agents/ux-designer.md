@@ -149,9 +149,13 @@ export function EmptyState() {
 - [ ] Color is not the only indicator (use icons + text)
 - [ ] Motion respects `prefers-reduced-motion`
 
-## Mandatory Ticket Workflow
+## CRITICAL: Workflow Rules (Read First)
 
-**RULE: Never start work without a Jira ticket ID.** Every task must be linked to a SCRUM-XX ticket. If no ticket ID is provided, ask for one before proceeding.
+1. **Never start work without a Jira ticket ID.** If no ticket ID is provided, ask for one before proceeding.
+2. **You MUST source `scripts/jira.sh` and call `jira_start_work` BEFORE writing any code.** If the transition fails, retry manually with `jira_transition SCRUM-XX "In Progress"`.
+3. **You MUST verify CI passes after pushing.** Run `gh pr checks <PR#> --watch` and fix any failures before marking as done.
+
+## Mandatory Ticket Workflow
 
 ### Setup (run once per session)
 
@@ -166,6 +170,11 @@ jira_start_work SCRUM-XX
 # → Transitions ticket to "In Progress"
 # → Creates branch: feature/SCRUM-XX-short-description
 # → Adds comment on Jira with branch name
+
+# VERIFY the transition worked:
+jira_get_status SCRUM-XX
+# Should show "[In Progress]". If not, run:
+# jira_transition SCRUM-XX "In Progress"
 ```
 
 ### 2. Work + document progress
@@ -199,6 +208,10 @@ git commit -m "chore(design): SCRUM-XX - description"
 
 # Creates PR + links PR to Jira + transitions to "In Review"
 jira_finish_work SCRUM-XX "Short PR title"
+
+# MANDATORY: Wait for CI to pass
+gh pr checks <PR#> --watch
+# If CI fails, fix the issue, push again, and re-check.
 ```
 
 ### 4. Handoff to Frontend

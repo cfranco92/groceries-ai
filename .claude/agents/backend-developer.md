@@ -98,9 +98,14 @@ These are documented in `docs/API_DESIGN.md` but have no code yet:
 | Receipts | `POST /receipts`, `GET /receipts`, `GET /receipts/:id`, `PATCH /receipts/:id/items/:itemId`, `DELETE /receipts/:id` | Phase 2 |
 | Insights | `GET /insights/spending`, `GET /insights/frequent-items` | Phase 3 |
 
-## Mandatory Ticket Workflow
+## CRITICAL: Workflow Rules (Read First)
 
-**RULE: Never start work without a Jira ticket ID.** Every task must be linked to a SCRUM-XX ticket. If no ticket ID is provided, ask for one before proceeding.
+1. **Never start work without a Jira ticket ID.** If no ticket ID is provided, ask for one before proceeding.
+2. **You MUST source `scripts/jira.sh` and call `jira_start_work` BEFORE writing any code.** If the transition fails, retry manually with `jira_transition SCRUM-XX "In Progress"`.
+3. **You MUST verify CI passes after pushing.** Run `gh pr checks <PR#> --watch` and fix any failures before marking as done.
+4. **You MUST create a handoff document** (`docs/handoffs/test-ready-sprint-N-api.md` or `docs/handoffs/test-ready-SCRUM-XX.md`) describing what you built. Failing to create this document is a workflow violation.
+
+## Mandatory Ticket Workflow
 
 ### Setup (run once per session)
 
@@ -115,6 +120,11 @@ jira_start_work SCRUM-XX
 # → Transitions ticket to "In Progress"
 # → Creates branch: feature/SCRUM-XX-short-description
 # → Adds comment on Jira with branch name
+
+# VERIFY the transition worked:
+jira_get_status SCRUM-XX
+# Should show "[In Progress]". If not, run:
+# jira_transition SCRUM-XX "In Progress"
 ```
 
 ### 2. Work + document progress
@@ -144,13 +154,27 @@ git commit -m "feat(api): SCRUM-XX - description"
 
 # Creates PR + links PR to Jira + transitions to "In Review"
 jira_finish_work SCRUM-XX "Short PR title"
+
+# MANDATORY: Wait for CI to pass
+gh pr checks <PR#> --watch
+# If CI fails, fix the issue, push again, and re-check.
+# Do NOT leave a PR with failing CI.
 ```
 
-### 4. Handoff to QA and Frontend
+### 4. Handoff to QA and Frontend (MANDATORY)
 
-- Create `docs/handoffs/test-ready-SCRUM-XX.md` describing endpoints built and what needs testing
+**You MUST create ALL of these before marking work as done:**
+
+- Create `docs/handoffs/test-ready-SCRUM-XX.md` (or `test-ready-sprint-N-api.md`) describing:
+  - Endpoints built (method, route, purpose)
+  - Prisma schema changes (if any)
+  - Environment variables added (if any)
+  - How to test each endpoint (sample requests/responses)
+  - Known limitations or mock behavior
 - Update `packages/shared-types/src/index.ts` when adding new interfaces so the frontend agent can consume them
 - Comment on Jira with the PR link and handoff document path
+
+**If you skip the handoff document, downstream agents (QA, Frontend) will be blocked.**
 
 ### Branch naming
 
@@ -252,6 +276,9 @@ For admin-only operations, use the `ensureAdmin` pattern (check `user.role !== U
 1. Run `pnpm --filter=api lint` -- must pass with zero warnings
 2. Run `pnpm --filter=api tsc --noEmit` -- must pass with no errors
 3. Run `pnpm --filter=api test` -- all tests must pass
-4. Verify Swagger decorators (`@ApiTags`, `@ApiBearerAuth`, `@ApiOperation`, `@ApiResponse`) on all new endpoints
-5. Verify DTOs have class-validator decorators and Swagger property decorators
-6. Update `packages/shared-types/src/index.ts` if adding new data types
+4. Run `pnpm build` -- full monorepo build must succeed (catches cross-package issues)
+5. Verify Swagger decorators (`@ApiTags`, `@ApiBearerAuth`, `@ApiOperation`, `@ApiResponse`) on all new endpoints
+6. Verify DTOs have class-validator decorators and Swagger property decorators
+7. Update `packages/shared-types/src/index.ts` if adding new data types
+8. Create handoff document (see section 4 above) -- **non-negotiable**
+9. After pushing: verify CI passes with `gh pr checks <PR#> --watch`
